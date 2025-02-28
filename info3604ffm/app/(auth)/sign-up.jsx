@@ -1,13 +1,13 @@
-import { View, Text, Image, ScrollView } from 'react-native'
+import { View, Text, Image, ScrollView, Alert } from 'react-native'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import images from '../../constants/images'
 import FormField from '@/components/FormField'
 import CustomButton from '@/components/CustomButton'
-import { Link } from 'expo-router'
+import { Link, router } from 'expo-router'
+import { authService } from '@/services/api'
 
 const SignUp = () => {
-
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -15,9 +15,49 @@ const SignUp = () => {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
 
-  const submit = () => {
+  const validateForm = () => {
+    const newErrors = {}
+    
+    if (!form.username.trim()) {
+      newErrors.username = 'Username is required'
+    }
+    
+    if (!form.password) {
+      newErrors.password = 'Password is required'
+    } else if (form.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
+  const submit = async () => {
+    if (!validateForm()) return
+    
+    setIsSubmitting(true)
+    
+    try {
+      // Register user
+      await authService.register({
+        username: form.username,
+        email: form.email,
+        password: form.password
+      })
+      
+      // On success, navigate to sign in
+      Alert.alert(
+        "Registration Successful",
+        "Your account was created successfully. Please sign in.",
+        [{ text: "OK", onPress: () => router.push('/sign-in') }]
+      )
+    } catch (error) {
+      Alert.alert("Registration Failed", error.message || "Something went wrong. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -39,6 +79,8 @@ const SignUp = () => {
             handleChangeText={(e) => setForm({...form, username: e})}
             otherStyles='mt-7'
           />
+          {errors.username && <Text className="text-red-500 self-start ml-2">{errors.username}</Text>}
+          
           <FormField
             title='Email'
             value={form.email}
@@ -46,17 +88,17 @@ const SignUp = () => {
             otherStyles='mt-7'
             keyboardType='email-address'
           />
+          
           <FormField
             title='Password'
             value={form.password}
-            handleChangeText={(e) => setForm({...form,
-              password: e
-            })}
+            handleChangeText={(e) => setForm({...form, password: e})}
             otherStyles='mt-7'
           />
+          {errors.password && <Text className="text-red-500 self-start ml-2">{errors.password}</Text>}
 
           <CustomButton
-            title="Sign In"
+            title="Sign Up"
             handlePress={submit}
             containerStyles="mt-7"
             isLoading={isSubmitting}

@@ -8,4 +8,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = {AllowAny}
+    permission_classes = (AllowAny,)
+
+    def create(self, request, *args, **kwargs):
+        logger.info(f'Received request to create user: {request}')
+        return super().create(request, *args, **kwargs)
