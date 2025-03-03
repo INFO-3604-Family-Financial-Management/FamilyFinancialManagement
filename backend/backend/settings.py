@@ -37,6 +37,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'console': {
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
         },
     },
@@ -45,13 +46,13 @@ LOGGING = {
         'level': 'INFO',
     },
     'loggers': {
-        'api': {
+        'django': {
             'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
+            'level': os.getenv("DJANGO_LOG_LEVEL", "DEBUG"),
+            },
         },
-    },
-}
+    }
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

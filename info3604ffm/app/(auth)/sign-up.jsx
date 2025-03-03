@@ -29,6 +29,12 @@ const SignUp = () => {
     } else if (form.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters'
     }
+
+    if (!form.email.trim()) {
+      newErrors.email = 'Email is required'
+    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+      newErrors.email = 'Email is invalid'
+    }
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
