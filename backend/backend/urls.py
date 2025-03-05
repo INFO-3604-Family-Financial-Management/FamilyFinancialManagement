@@ -1,7 +1,7 @@
 
 from django.contrib import admin
 from django.urls import path, include
-from api.views import CreateUserView, ExpenseListCreateView
+from api.views import CreateUserView, ExpenseListCreateView, RecentExpensesView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -11,4 +11,5 @@ urlpatterns = [
     path("api/token/refresh/", TokenRefreshView.as_view(), name="refresh"),
     path("api-auth/", include("rest_framework.urls")),
     path('expenses/', ExpenseListCreateView.as_view(), name='expense-list-create'),
+    path('expenses/recent/', RecentExpensesView.as_view(), name='recent-expenses'),
 ]

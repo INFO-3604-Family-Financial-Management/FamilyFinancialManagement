@@ -6,6 +6,7 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from .serializers import UserSerializer, ExpenseSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from .models import Expense
 
 # Logger instance for this module
 logger = logging.getLogger(__name__)
@@ -40,3 +41,10 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class RecentExpensesView(generics.ListAPIView):
+    serializer_class = ExpenseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Expense.objects.filter(user=self.request.user).order_by('-created_at')[:5]
