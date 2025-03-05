@@ -2,9 +2,9 @@ import logging
 
 from django.shortcuts import render
 from django.contrib.auth.models import User 
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
-from .serializers import UserSerializer
+from .serializers import UserSerializer, ExpenseSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 # Logger instance for this module
@@ -30,3 +30,13 @@ class CreateUserView(generics.CreateAPIView):
         response = super().create(request, *args, **kwargs)
         logger.info(f'Created user: {response.data}')
         return response
+
+class ExpenseListCreateView(generics.ListCreateAPIView):
+    serializer_class = ExpenseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Expense.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
