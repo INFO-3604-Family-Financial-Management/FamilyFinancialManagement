@@ -51,7 +51,7 @@ export const authService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: credentials.email,
+          username: credentials.username,
           password: credentials.password,
         }),
       });

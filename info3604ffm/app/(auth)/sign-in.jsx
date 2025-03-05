@@ -4,12 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import images from '../../constants/images'
 import FormField from '@/components/FormField'
 import CustomButton from '@/components/CustomButton'
-import { Link, router } from 'expo-router'
+import { Link, Redirect, useRouter } from 'expo-router'
 import { authService } from '@/services/api'
 
 const SignIn = () => {
   const [form, setForm] = useState({
-    email: '',
+    username: '',
     password: ''
   })
 
@@ -19,8 +19,8 @@ const SignIn = () => {
   const validateForm = () => {
     const newErrors = {}
     
-    if (!form.email.trim()) {
-      newErrors.email = 'Email/Username is required'
+    if (!form.username.trim()) {
+      newErrors.username = 'Email/Username is required'
     }
     
     if (!form.password) {
@@ -31,6 +31,8 @@ const SignIn = () => {
     return Object.keys(newErrors).length === 0
   }
 
+  const router = useRouter();
+
   const submit = async () => {
     if (!validateForm()) return
     
@@ -39,13 +41,13 @@ const SignIn = () => {
     try {
       // Login user
       await authService.login({
-        email: form.email,
+        username: form.username,
         password: form.password
       })
       
       // Navigate to home on success
-      router.replace('/home')
-    } catch (error) {
+      router.push('/home');
+    } catch (error) { 
       Alert.alert("Login Failed", "Invalid username or password. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -66,13 +68,12 @@ const SignIn = () => {
           </Text>
 
           <FormField
-            title='Email'
-            value={form.email}
-            handleChangeText={(e) => setForm({...form, email: e})}
+            title='Username'
+            value={form.username}
+            handleChangeText={(e) => setForm({...form, username: e})}
             otherStyles='mt-7'
-            keyboardType='email-address'
           />
-          {errors.email && <Text className="text-red-500 self-start ml-2">{errors.email}</Text>}
+          {errors.username && <Text className="text-red-500 self-start ml-2">{errors.username}</Text>}
           
           <FormField
             title='Password'
