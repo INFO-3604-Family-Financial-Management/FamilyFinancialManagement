@@ -42,6 +42,22 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+class ExpenseDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ExpenseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Expense.objects.filter(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        expense_description = instance.description
+        self.perform_destroy(instance)
+        return Response(
+            {"message": f"Expense '{expense_description}' successfully deleted"},
+            status=status.HTTP_200_OK
+        )
+
 class RecentExpensesView(generics.ListAPIView):
     serializer_class = ExpenseSerializer
     permission_classes = [permissions.IsAuthenticated]
