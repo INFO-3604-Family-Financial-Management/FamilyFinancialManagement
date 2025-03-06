@@ -180,25 +180,29 @@ export const fetchWithAuth = async (url, options = {}) => {
       headers.Authorization = `Bearer ${token}`;
     }
     
-    const response = await fetch(`${BACKEND_URL}${url}`, {
+    // Ensure proper URL construction
+    const fullUrl = `${BACKEND_URL}${url.startsWith('/') ? url : '/' + url}`;
+    console.log('Making request to:', fullUrl); // Debug log
+    
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
     });
+    
+    // Debug log
+    console.log('Response status:', response.status);
     
     // If unauthorized, try to refresh token
     if (response.status === 401) {
       try {
         token = await authService.refreshToken();
-        
-        // Retry request with new token
         headers.Authorization = `Bearer ${token}`;
         
-        return fetch(`${BACKEND_URL}${url}`, {
+        return fetch(fullUrl, {
           ...options,
           headers,
         });
       } catch (refreshError) {
-        // If refresh fails, throw error to be handled by caller
         throw new Error('Authentication failed. Please login again.');
       }
     }
@@ -207,5 +211,32 @@ export const fetchWithAuth = async (url, options = {}) => {
   } catch (error) {
     console.error('API request error:', error);
     throw error;
+  }
+};
+
+// Add this after your existing authService
+
+export const expenseService = {
+  // Add a new expense
+  async addExpense(expenseData) {
+    try {
+      const response = await fetchWithAuth('/api/expenses/', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: expenseData.description,
+          amount: expenseData.amount
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to add expense');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Add expense error:', error);
+      throw error;
+    }
   }
 };
