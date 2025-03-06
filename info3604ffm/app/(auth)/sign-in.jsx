@@ -34,25 +34,25 @@ const SignIn = () => {
   const router = useRouter();
 
   const submit = async () => {
-    if (!validateForm()) return
-    
-    setIsSubmitting(true)
-    
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
     try {
       // Login user
       await authService.login({
         username: form.username,
         password: form.password
-      })
-      
+      });
+
       // Navigate to home on success
       router.push('/home');
-    } catch (error) { 
-      Alert.alert("Login Failed", "Invalid username or password. Please try again.")
+    } catch (error) {
+      Alert.alert("Login Failed", "Invalid username or password. Please try again.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <SafeAreaView className='bg-black h-full'>

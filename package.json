@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "axios": "^1.8.1",
+    "install": "^0.13.0",
+    "npm": "^11.2.0",
+    "react-native-bouncy-checkbox": "^4.1.2",
+    "react-native-dropdown-select-list": "^2.0.5"
+  }
+}

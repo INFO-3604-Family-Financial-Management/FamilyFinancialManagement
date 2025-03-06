@@ -5,6 +5,7 @@ import { SelectList } from "react-native-dropdown-select-list";
 import BouncyCheckbox from "react-native-bouncy-checkbox";
 import FormField from "@/components/FormField";
 import CustomButton from "@/components/CustomButton";
+import axios from 'axios';
 
 const ExpenseTracking = () => {
   const data = [
@@ -23,7 +24,19 @@ const ExpenseTracking = () => {
     rec: null,
   });
 
-  const submit = () => {};
+  const submit = async () => {
+    try {
+      const response = await axios.post('http://127.0.0.1/api/expenses/', form, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await getAccessToken()}`, // Assuming you have a function to get the access token
+        },
+      });
+      console.log('Expense added successfully:', response.data);
+    } catch (error) {
+      console.error('Error adding expense:', error);
+    }
+  };
 
   return (
     <SafeAreaView className="bg-primary h-full">
@@ -33,14 +46,14 @@ const ExpenseTracking = () => {
           title="Add New Expense: "
           value={form.title}
           placeholder="Enter new expense"
-          handleChangeText={(e) => ({ ...form, title: e })}
+          handleChangeText={(e) => setForm({ ...form, title: e })}
           otherStyles="mt-10"
         ></FormField>
         <FormField
           title="Add Value:  "
           value={form.value}
           placeholder="Enter value"
-          handleChangeText={(e) => ({ ...form, title: e })}
+          handleChangeText={(e) => setForm({ ...form, value: e })}
           otherStyles="mt-5 mb-5"
         ></FormField>
         <Text className="mb-2">Select Category:</Text>
@@ -51,14 +64,14 @@ const ExpenseTracking = () => {
           title="Add Description: "
           value={form.desc}
           placeholder="Description"
-          handleChangeText={(e) => ({ ...form, title: e })}
+          handleChangeText={(e) => setForm({ ...form, desc: e })}
           otherStyles="mt-5 mb-5"
         ></FormField>
 
         <BouncyCheckbox
         isChecked={form.rec}
         onPress={(isChecked) => setForm({
-          ...form, recurring: isChecked
+          ...form, rec: isChecked
         })} text="Recurring?" />
 
         <CustomButton

@@ -1,5 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { BACKEND_URL } from '@/constants/config';
+import axios from 'axios';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Secure Storage Keys
 const ACCESS_TOKEN_KEY = 'tfr_access_token';
@@ -45,27 +48,29 @@ export const authService = {
   // Login user and get tokens
   async login(credentials) {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/token/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: credentials.username,
-          password: credentials.password,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
-      }
-
-      const data = await response.json();
+      const response = await axios.post(`${BACKEND_URL}/api/token/`, credentials);
+      const data = response.data;
       
       // Store tokens securely
-      await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access);
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh);
+      if(Platform.OS === 'web') {
+        await AsyncStorage.setItem(
+          ACCESS_TOKEN_KEY, 
+          data.access
+        );
+        await AsyncStorage.setItem(
+          REFRESH_TOKEN_KEY,
+          data.refresh
+        );
+      }else{
+        await SecureStore.setItemAsync(
+          ACCESS_TOKEN_KEY,
+          data.access
+        );
+        await SecureStore.setItemAsync(
+          REFRESH_TOKEN_KEY,
+          data.refresh
+        );
+      }
       
       return data;
     } catch (error) {
@@ -77,7 +82,11 @@ export const authService = {
   // Get current access token
   async getAccessToken() {
     try {
-      return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+      if(Platform.OS === 'web'){
+        return await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+      }else{
+        return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+      }
     } catch (error) {
       console.error('Error getting access token:', error);
       return null;
@@ -87,7 +96,12 @@ export const authService = {
   // Refresh token when expired
   async refreshToken() {
     try {
-      const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+       
+      if(Platform.OS === 'web'){
+        const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+      }else{
+        const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      }
       
       if (!refreshToken) {
         throw new Error('No refresh token available');
@@ -110,7 +124,12 @@ export const authService = {
       }
 
       const data = await response.json();
-      await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access);
+      if(Platform.OS === 'web'){
+        await AsyncStorage.setItem
+        (ACCESS_TOKEN_KEY, data.access);
+      }else{
+        await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access);
+      }
       
       return data.access;
     } catch (error) {
@@ -122,8 +141,13 @@ export const authService = {
   // Logout user (clear tokens)
   async logout() {
     try {
-      await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      if(Platform.OS === 'web'){
+        await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+        await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+      }else{
+        await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      }
     } catch (error) {
       console.error('Logout error:', error);
     }
