@@ -10,7 +10,8 @@ urlpatterns = [
     path("api/token/", TokenObtainPairView.as_view(), name="get_token"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="refresh"),
     path("api-auth/", include("rest_framework.urls")),
-    path('expenses/', ExpenseListCreateView.as_view(), name='expense-list-create'),
-    path('expenses/recent/', RecentExpensesView.as_view(), name='recent-expenses'),
-    path('expenses/<int:pk>/', ExpenseDetailView.as_view(), name='expense-detail'),
+    path('api/expenses/', ExpenseListCreateView.as_view(), name='expense-list-create'),
+    path('api/expenses/recent/', RecentExpensesView.as_view(), name='recent-expenses'),
+    path('api/expenses/<int:pk>/', ExpenseDetailView.as_view(), name='expense-detail'),
+    path('api/transactions', RecentExpensesView.as_view(), name='view-transactions'),
 ]
