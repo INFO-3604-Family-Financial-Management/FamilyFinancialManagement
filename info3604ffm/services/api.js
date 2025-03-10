@@ -74,6 +74,11 @@ export const authService = {
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh);
       }
       
+      console.log('Tokens stored successfully:', {
+        accessToken: data.access,
+        refreshToken: data.refresh
+      });
+
       return data;
     } catch (error) {
       console.error('Login error:', error);
@@ -84,11 +89,14 @@ export const authService = {
   // Get current access token
   async getAccessToken() {
     try {
+      let token;
       if(Platform.OS === 'web') {
-        return await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+        token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
       } else{
-        return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+        token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       }
+      console.log('Retrieved access token:', token);
+      return token;
     } catch (error) {
       console.error('Error getting access token:', error);
       return null;
@@ -184,37 +192,58 @@ export const fetchWithAuth = async (url, options = {}) => {
     const fullUrl = `${BACKEND_URL}${url.startsWith('/') ? url : '/' + url}`;
     console.log('Making request to:', fullUrl); // Debug log
     
-    const response = await fetch(fullUrl, {
-      ...options,
+    // Add more detailed logging
+    console.log('Request details:', {
+      method: options.method || 'GET',
       headers,
+      body: options.body ? JSON.parse(options.body) : undefined
     });
-    
-    // Debug log
-    console.log('Response status:', response.status);
-    
-    // If unauthorized, try to refresh token
-    if (response.status === 401) {
-      try {
-        token = await authService.refreshToken();
-        headers.Authorization = `Bearer ${token}`;
-        
-        return fetch(fullUrl, {
-          ...options,
-          headers,
+
+    try {
+      const response = await fetch(fullUrl, {
+        ...options,
+        headers,
+      });
+      
+      // Enhanced error logging
+      console.log('Response status:', response.status);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: errorData
         });
-      } catch (refreshError) {
-        throw new Error('Authentication failed. Please login again.');
       }
-    }
     
-    return response;
+      // If unauthorized, try to refresh token
+      if (response.status === 401) {
+        try {
+          token = await authService.refreshToken();
+          headers.Authorization = `Bearer ${token}`;
+          
+          console.log('Retrying request with new token:', token);
+          return fetch(fullUrl, {
+            ...options,
+            headers,
+          });
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          throw new Error('Authentication failed. Please login again.');
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('API request error:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('API request error:', error);
     throw error;
   }
 };
 
-// Add this after your existing authService
 
 export const expenseService = {
   // Add a new expense
