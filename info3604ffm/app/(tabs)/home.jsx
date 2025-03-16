@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
 import axios from 'axios';
+import {router } from 'expo-router';
 import CustomButton from '@/components/CustomButton';
 import { BACKEND_URL } from '@/constants/config';
 import { authService } from '@/services/api';
@@ -31,19 +32,20 @@ const LatestCustomers = () => {
   };
 
   return (
-    <SafeAreaView className="">
+    <SafeAreaView className="bg-gray-500 h-full">
       <View className="mt-10 items-center">
         <Text className="text-black text-2xl">Home</Text>
       </View>
-      <View className="bg-black border-2 h-24 mx-6 mt-10 flex-row rounded-2xl items-center justify-center">
+      <View className="bg-gray-700 border-2 border-gray-200 h-24 mx-6 mt-10 flex-row rounded-2xl items-center justify-center">
         <Text className="text-white text-2xl font-extrabold text-center">
-          Daily Budget {"\n"} $200
+          Budget {"\n"} $2000
         </Text>
       </View>
       <View className="bg-white p-4 rounded-lg shadow-md m-4 mt-10">
         <View className="flex-row justify-between mb-4">
           <Text className="text-xl font-bold text-gray-900">Latest Transactions</Text>
-          <TouchableOpacity>
+          <TouchableOpacity
+          onPress={() => {router.push('/expenses')}}>
             <Text className="text-sm text-blue-600">View all</Text>
           </TouchableOpacity>
         </View>
@@ -65,7 +67,7 @@ const LatestCustomers = () => {
       </View>
       <CustomButton
         title="View Budgets"
-        handlePress={submit}
+        handlePress={() => router.push("/budget")}
         containerStyles="mx-8 mt-6"
       />
     </SafeAreaView>

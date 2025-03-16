@@ -51,6 +51,21 @@ const TabsLayout = () => {
           }}
         />
         <Tabs.Screen 
+          name="family"
+          options={{
+            title: 'Family',
+            headerShown: false,
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.family}
+                color={color}
+                name="Family"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
           name="profile"
           options={{
             title: 'Profile',
@@ -60,6 +75,54 @@ const TabsLayout = () => {
                 icon={icons.profile}
                 color={color}
                 name="Profile"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="budget"
+          options={{
+            title: 'Budget',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Budget"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="expenses"
+          options={{
+            title: 'Expenses',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Expenses"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="create-budget"
+          options={{
+            title: 'Create Budget',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Create Budget"
                 focused={focused}
               />
             )

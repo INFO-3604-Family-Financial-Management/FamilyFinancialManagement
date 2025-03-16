@@ -8,7 +8,7 @@ const Profile = () => {
   const { logout } = useAuth();
 
   return (
-    <SafeAreaView className="bg-black h-full p-4">
+    <SafeAreaView className="bg-gray-500 h-full p-4">
       <View className="flex-1 justify-center items-center">
         <Text className="text-white text-2xl font-bold mb-10">Profile</Text>
         

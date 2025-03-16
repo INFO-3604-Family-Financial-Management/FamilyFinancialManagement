@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { BACKEND_URL } from '@/constants/config';
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform, AsyncStorage } from 'react-native';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Secure Storage Keys
 const ACCESS_TOKEN_KEY = 'tfr_access_token';
