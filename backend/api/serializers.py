@@ -25,3 +25,31 @@ class ExpenseSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'amount', 'description', 'date']
         read_only_fields = ['user', 'date']
 
+class FamilySerializer(serializers.ModelSerializer):
+    members = UserSerializer(many=True)
+
+    class Meta:
+        model = Family
+        fields = ['id', 'name', 'members']
+
+    def create(self, validated_data):
+        members_data = validated_data.pop('members')
+        family = Family.objects.create(**validated_data)
+        for member_data in members_data:
+            user = User.objects.create_user(**member_data)
+            family.members.add(user)
+        return family
+
+    def update(self, instance, validated_data):
+        members_data = validated_data.pop('members', None)
+        instance.name = validated_data.get('name', instance.name)
+        instance.save()
+
+        if members_data:
+            instance.members.clear()
+            for member_data in members_data:
+                user = User.objects.create_user(**member_data)
+                instance.members.add(user)
+
+        return instance
+

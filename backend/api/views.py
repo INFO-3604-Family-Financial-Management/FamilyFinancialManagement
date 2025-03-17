@@ -4,9 +4,9 @@ from django.shortcuts import render
 from django.contrib.auth.models import User 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
-from .serializers import UserSerializer, ExpenseSerializer
+from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Expense
+from .models import Expense, Family
 
 # Logger instance for this module
 logger = logging.getLogger(__name__)
@@ -64,3 +64,22 @@ class RecentExpensesView(generics.ListAPIView):
 
     def get_queryset(self):
         return Expense.objects.filter(user=self.request.user).order_by('-created_at')[:5]
+    
+class FamilyListCreateView(generics.ListCreateAPIView):
+    queryset = Family.objects.all()
+    serializer_class = FamilySerializer
+
+class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Family.objects.all()
+    serializer_class = FamilySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Family.objects.filter(members=self.request.user)
+
+    def perform_destroy(self, instance):
+        instance.members.remove(self.request.user)
+        if instance.members.count() == 0:
+            instance.delete()
+        else:
+            instance.save()
