@@ -48,7 +48,10 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': os.getenv("DJANGO_LOG_LEVEL", "DEBUG"),
+            #change this back if u wanna see all the file long talk
+            # 'level': os.getenv("DJANGO_LOG_LEVEL", "DEBUG"),
+            'level': 'WARNING',
+            'propagate': True,
             },
         },
     }
