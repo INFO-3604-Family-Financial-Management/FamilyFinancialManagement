@@ -68,6 +68,12 @@ class RecentExpensesView(generics.ListAPIView):
 class FamilyListCreateView(generics.ListCreateAPIView):
     queryset = Family.objects.all()
     serializer_class = FamilySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
 
 class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Family.objects.all()

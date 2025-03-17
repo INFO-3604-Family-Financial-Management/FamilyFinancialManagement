@@ -26,15 +26,18 @@ class ExpenseSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'date']
 
 class FamilySerializer(serializers.ModelSerializer):
-    members = UserSerializer(many=True)
+    members = UserSerializer(many=True, required=False)
 
     class Meta:
         model = Family
         fields = ['id', 'name', 'members']
 
     def create(self, validated_data):
-        members_data = validated_data.pop('members')
+        members_data = validated_data.pop('members', [])
         family = Family.objects.create(**validated_data)
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            family.members.add(request.user)
         for member_data in members_data:
             user = User.objects.create_user(**member_data)
             family.members.add(user)
