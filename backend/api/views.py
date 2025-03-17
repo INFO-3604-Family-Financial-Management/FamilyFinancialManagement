@@ -81,7 +81,9 @@ class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Family.objects.filter(members=self.request.user)
+        user = self.request.user
+        logging.info(f"Filtering families for user: {user.username}")
+        return Family.objects.filter(members=user)
 
     def perform_destroy(self, instance):
         instance.members.remove(self.request.user)

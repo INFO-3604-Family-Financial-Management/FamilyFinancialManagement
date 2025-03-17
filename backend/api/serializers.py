@@ -48,8 +48,11 @@ class FamilySerializer(serializers.ModelSerializer):
         instance.name = validated_data.get('name', instance.name)
         instance.save()
 
-        if members_data:
+        if members_data is not None:
             instance.members.clear()
+            request = self.context.get('request')
+            if request and hasattr(request, 'user'):
+                instance.members.add(request.user)
             for member_data in members_data:
                 user = User.objects.create_user(**member_data)
                 instance.members.add(user)
