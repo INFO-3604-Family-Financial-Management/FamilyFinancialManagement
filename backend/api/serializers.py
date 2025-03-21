@@ -25,15 +25,21 @@ class ExpenseSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'amount', 'description', 'date']
         read_only_fields = ['user', 'date']
 
+from django.core.exceptions import ValidationError
+
 class FamilySerializer(serializers.ModelSerializer):
     members = UserSerializer(many=True, required=False)
+    existing_members = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
 
     class Meta:
         model = Family
-        fields = ['id', 'name', 'members']
+        fields = ['id', 'name', 'members', 'existing_members']
 
     def create(self, validated_data):
         members_data = validated_data.pop('members', [])
+        existing_members_data = validated_data.pop('existing_members', [])
         family = Family.objects.create(**validated_data)
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
@@ -41,10 +47,17 @@ class FamilySerializer(serializers.ModelSerializer):
         for member_data in members_data:
             user = User.objects.create_user(**member_data)
             family.members.add(user)
+        for username in existing_members_data:
+            try:
+                user = User.objects.get(username=username)
+                family.members.add(user)
+            except User.DoesNotExist:
+                raise ValidationError(f"User with username '{username}' does not exist.")
         return family
 
     def update(self, instance, validated_data):
         members_data = validated_data.pop('members', None)
+        existing_members_data = validated_data.pop('existing_members', None)
         instance.name = validated_data.get('name', instance.name)
         instance.save()
 
@@ -56,6 +69,13 @@ class FamilySerializer(serializers.ModelSerializer):
             for member_data in members_data:
                 user = User.objects.create_user(**member_data)
                 instance.members.add(user)
+        if existing_members_data is not None:
+            for username in existing_members_data:
+                try:
+                    user = User.objects.get(username=username)
+                    instance.members.add(user)
+                except User.DoesNotExist:
+                    raise ValidationError(f"User with username '{username}' does not exist.")
 
         return instance
     
