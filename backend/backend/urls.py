@@ -1,7 +1,8 @@
 
 from django.contrib import admin
 from django.urls import path, include
-from api.views import CreateUserView, ExpenseListCreateView, RecentExpensesView, ExpenseDetailView, FamilyListCreateView, FamilyDetailView
+from api.views import *
+from api.views import CreateUserView, ExpenseListCreateView, RecentExpensesView, ExpenseDetailView, FamilyListCreateView, FamilyDetailView, BudgetDetailView, BudgetListCreateView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -16,4 +17,6 @@ urlpatterns = [
     path('api/transactions', RecentExpensesView.as_view(), name='view-transactions'),
     path('api/families/', FamilyListCreateView.as_view(), name='family-list-create'),
     path('api/families/<int:pk>/', FamilyDetailView.as_view(), name='family-detail'),
+    path('api/budgets/', BudgetListCreateView.as_view(), name='budget-list-create'),
+    path('api/budgets/<int:pk>/', BudgetDetailView.as_view(), name='budget-detail'),
 ]

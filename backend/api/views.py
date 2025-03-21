@@ -4,9 +4,10 @@ from django.shortcuts import render
 from django.contrib.auth.models import User 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
-from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer
+from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Expense, Family
+from .models import Expense, Family, Budget
+from .models import *
 
 # Logger instance for this module
 logger = logging.getLogger(__name__)
@@ -91,3 +92,20 @@ class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
             instance.delete()
         else:
             instance.save()
+
+class BudgetListCreateView(generics.ListCreateAPIView):
+    serializer_class = BudgetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Budget.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = BudgetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Budget.objects.filter(user=self.request.user)

@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Expense
+from .models import Expense, Family, Budget
 from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
@@ -58,4 +58,12 @@ class FamilySerializer(serializers.ModelSerializer):
                 instance.members.add(user)
 
         return instance
+    
+class BudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Budget
+        fields = ['id', 'user', 'name', 'amount', 'category', 'created_at']
+        read_only_fields = ['user', 'created_at']
+
+
 
