@@ -4,7 +4,9 @@ from django.shortcuts import render
 from django.contrib.auth.models import User 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
-from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer
+from rest_framework.views import APIView
+from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer, GoalSerializer, IncomeSerializer
+from .serializers import *
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Expense, Family, Budget
 from .models import *
@@ -109,3 +111,64 @@ class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Budget.objects.filter(user=self.request.user)
+
+class MonthlyBudgetStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        monthly_expenses = Expense.get_monthly_expenses(user)
+        monthly_budget = Budget.get_monthly_budget(user)
+        remaining_budget = monthly_budget - monthly_expenses
+
+        return Response({
+            'monthly_expenses': monthly_expenses,
+            'monthly_budget': monthly_budget,
+            'remaining_budget': remaining_budget
+        })
+
+class GoalListCreateView(generics.ListCreateAPIView):
+    serializer_class = GoalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = GoalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+    
+class IncomeListCreateView(generics.ListCreateAPIView):
+    serializer_class = IncomeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Income.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class MonthlyBudgetStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        monthly_expenses = Expense.get_monthly_expenses(user)
+        monthly_budget = Budget.get_monthly_budget(user)
+        monthly_income = Income.get_monthly_income(user)
+        remaining_budget = monthly_income - monthly_expenses - monthly_budget
+
+        return Response({
+            'monthly_expenses': monthly_expenses,
+            'monthly_budget': monthly_budget,
+            'monthly_income': monthly_income,
+            'remaining_budget': remaining_budget
+        })
