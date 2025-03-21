@@ -97,3 +97,14 @@ class IncomeSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'amount', 'date', 'created_at']
         read_only_fields = ['user', 'date', 'created_at']
 
+class StreakSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Streak
+        fields = ['id', 'user', 'count', 'last_updated']
+        read_only_fields = ['user', 'last_updated']
+
+class ContributionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contribution
+        fields = ['id', 'user', 'goal', 'amount', 'date', 'created_at']
+        read_only_fields = ['user', 'date', 'created_at']

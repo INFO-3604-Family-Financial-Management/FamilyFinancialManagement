@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from api.views import *
-from api.views import CreateUserView, ExpenseListCreateView, RecentExpensesView, ExpenseDetailView, FamilyListCreateView, FamilyDetailView, BudgetDetailView, BudgetListCreateView, GoalDetailView, GoalListCreateView, MonthlyBudgetStatusView
+from api.views import CreateUserView, ExpenseListCreateView, RecentExpensesView, ExpenseDetailView, FamilyListCreateView, FamilyDetailView, BudgetDetailView, BudgetListCreateView, GoalDetailView, GoalListCreateView, MonthlyBudgetStatusView, ContributionListCreateView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/monthly-budget-status/', MonthlyBudgetStatusView.as_view(), name='monthly-budget-status'),
     path('api/goals/', GoalListCreateView.as_view(), name='goal-list-create'),
     path('api/goals/<int:pk>/', GoalDetailView.as_view(), name='goal-detail'),
+    path('api/contributions/', ContributionListCreateView.as_view(), name='contribution-list-create'),
     path('api/income/', IncomeListCreateView.as_view(), name='income-list-create'),
     path('api/monthly-budget-status/', MonthlyBudgetStatusView.as_view(), name='monthly-budget-status'),
 ]

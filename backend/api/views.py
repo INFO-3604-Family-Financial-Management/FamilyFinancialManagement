@@ -1,5 +1,6 @@
 import logging
 
+from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import User 
 from rest_framework import generics, status, permissions
@@ -172,3 +173,39 @@ class MonthlyBudgetStatusView(APIView):
             'monthly_income': monthly_income,
             'remaining_budget': remaining_budget
         })
+    
+    def update_streak(self, user):
+        streak, created = Streak.objects.get_or_create(user=user)
+        streak.count += 1
+        streak.save()
+
+class ContributionListCreateView(generics.ListCreateAPIView):
+    serializer_class = ContributionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Contribution.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        contribution = serializer.save(user=self.request.user)
+        self.update_budget_and_income(contribution)
+
+    def update_budget_and_income(self, contribution):
+        user = contribution.user
+        amount = contribution.amount
+
+        #update monthly budget
+        budget, created = Budget.objects.get_or_create(
+            user=user,
+            name=f"Contribution to {contribution.goal.name}",
+            defaults={'amount': amount, 'category': 'Contribution'}
+        )
+        if not created:
+            budget.amount += amount
+            budget.save()
+
+        #subtract from monthly income
+        income = Income.objects.filter(user=user).first()
+        if income:
+            income.amount -= amount
+            income.save()
