@@ -10,7 +10,7 @@ const Budget = () => {
         <View className="mt-10 items-center">
             <Text className="text-black font-bold text-3xl">Budgets</Text>
         </View>
-        <View className='bg-white p-4 rounded-lg shadow-md m-4 mt-10 h-[65vh]'>
+        <View className='bg-white p-4 rounded-lg shadow-md m-4 mt-10 h-[55vh]'>
             <Text className="text-2xl font-bold text-gray-900 text-center">
                 February
             </Text>
@@ -33,7 +33,12 @@ const Budget = () => {
             </View>   
         </View>
         <CustomButton
-        title="Add Budget"
+        title="Add Category"
+        handlePress={() => router.push("/create-budget")}
+        containerStyles="mx-8 mt-2"
+        />
+        <CustomButton
+        title="Add Money"
         handlePress={() => router.push("/create-budget")}
         containerStyles="mx-8 mt-2"
         />

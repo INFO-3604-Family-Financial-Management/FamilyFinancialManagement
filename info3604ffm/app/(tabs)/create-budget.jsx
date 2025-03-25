@@ -16,7 +16,7 @@ const CreateBudget = () => {
   return (
     <SafeAreaView className="bg-gray-500 h-full">
       <View className="mt-10 items-center">
-        <Text className="text-black font-bold text-3xl">Adding Budget</Text>
+        <Text className="text-black font-bold text-3xl">Adding New Category</Text>
       </View>
       <View className="bg-gray-600 p-4 rounded-lg m-4 mt-10 h-[65vh]">
         <Text className="text-2xl text-left font-bold text-gray-900 text-center">

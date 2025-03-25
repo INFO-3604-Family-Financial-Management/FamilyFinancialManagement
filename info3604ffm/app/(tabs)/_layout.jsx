@@ -36,6 +36,21 @@ const TabsLayout = () => {
           }}
         />
         <Tabs.Screen 
+          name="goals"
+          options={{
+            title: 'Goals',
+            headerShown: false,
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.target}
+                color={color}
+                name="Goals"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
           name="expense-tracking"
           options={{
             title: 'Expenses',
@@ -123,6 +138,22 @@ const TabsLayout = () => {
                 icon={icons.profile}
                 color={color}
                 name="Create Budget"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="export-data"
+          options={{
+            title: 'Export Data',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Export Data"
                 focused={focused}
               />
             )
