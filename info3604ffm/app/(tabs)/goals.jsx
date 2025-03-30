@@ -1,5 +1,6 @@
 import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native'
 import React from 'react'
+import { router } from 'expo-router'
 import CustomButton from '../../components/CustomButton'
 
 const Goals = () => {
@@ -12,6 +13,7 @@ const Goals = () => {
         <View className='p-4 rounded-lg mt-5 h-[55vh]'>
             <View className="flex-1 justify-center bg-white items-center rounded-lg p-4 my-4 w-full">
                 <TouchableOpacity className="flex-row items-center justify-between w-full p-4 mb-4 rounded-lg"
+                    onPress={() => router.push('edit-goal')}
                 >
                     <Text className="text-lg text-left font-medium w-full"> - Save for France</Text>
                     {/* Graph would go here. I will write code for the graph soon.  */}
@@ -20,8 +22,8 @@ const Goals = () => {
         </View>
         
         <CustomButton
-            title="Add Goal"
-            onPress={() => {router.push('/add-goal')}}
+            title="View Budgets"
+            handlePress={() => router.push('edit-goal')}
             containerStyles="mx-8 mt-6"
         />
     </SafeAreaView>

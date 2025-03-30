@@ -1,14 +1,14 @@
-import { View, Text, TouchableOpacity } from 'react-native'
+import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native'
 import React from 'react'
 import {router} from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import CustomButton from '@/components/CustomButton'
+import CustomButton from '../../components/CustomButton'
 
-const Budget = () => {
+
+const FamilyBudget = () => {
   return (
     <SafeAreaView className="bg-gray-500 h-full">
         <View className="mt-10 items-center">
-            <Text className="text-black font-bold text-3xl">Budgets</Text>
+            <Text className="text-black font-bold text-3xl">Family Budget</Text>
         </View>
         <View className='bg-white p-4 rounded-lg shadow-md m-4 mt-10 h-[55vh]'>
             <Text className="text-2xl font-bold text-gray-900 text-center">
@@ -53,6 +53,4 @@ const Budget = () => {
   )
 }
 
-export default Budget
-
-
+export default FamilyBudget

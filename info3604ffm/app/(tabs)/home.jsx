@@ -2,9 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import axios from 'axios';
 import { router } from 'expo-router';
-import CustomButton from '@/components/CustomButton';
-import { BACKEND_URL } from '@/constants/config';
-import { authService } from '@/services/api';
+import CustomButton from '../../components/CustomButton';
+import { BACKEND_URL } from '../../constants/config';
+import { authService } from '../../services/api';
 
 const LatestCustomers = () => {
   const [expenses, setExpenses] = useState([]);
@@ -68,7 +68,7 @@ const LatestCustomers = () => {
       </View>
       <CustomButton
         title="View Budgets"
-        handlePress={() => router.push('/goals')}
+        handlePress={() => router.push('/budget')}
         containerStyles="mx-8 mt-6"
       />
     </SafeAreaView>

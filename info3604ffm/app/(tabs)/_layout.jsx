@@ -159,6 +159,102 @@ const TabsLayout = () => {
             )
           }}
         />
+        <Tabs.Screen 
+          name="edit-goal"
+          options={{
+            title: 'Edit Goal',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Edit Goal"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="family-members"
+          options={{
+            title: 'Family Members',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Family Members"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="family-budget"
+          options={{
+            title: 'Family Budget',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Family Budget"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="family-savings"
+          options={{
+            title: 'Family Savings',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Family Savings"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="family-goals"
+          options={{
+            title: 'Family Goals',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Family Goals"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="edit-family"
+          options={{
+            title: 'Edit Family',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Edit Family"
+                focused={focused}
+              />
+            )
+          }}
+        />
       </Tabs>
     </>
   )
