@@ -255,6 +255,54 @@ const TabsLayout = () => {
             )
           }}
         />
+        <Tabs.Screen 
+          name="edit-family-goal"
+          options={{
+            title: 'Edit Family Goals',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Edit Family Goals"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="add-family-goal"
+          options={{
+            title: 'Add Family Goals',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Add Family Goals"
+                focused={focused}
+              />
+            )
+          }}
+        />
+        <Tabs.Screen 
+          name="add-family-member"
+          options={{
+            title: 'Add Family Member',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Add Family Member"
+                focused={focused}
+              />
+            )
+          }}
+        />
       </Tabs>
     </>
   )

@@ -39,6 +39,7 @@ const Budget = () => {
                 </View>
             </View>   
         </View>
+        {/* These go to same page but should do different things not sure if that is possible if not lmk i will make separate pages for each */}
         <CustomButton
         title="Add Category"
         handlePress={() => router.push("/create-budget")}

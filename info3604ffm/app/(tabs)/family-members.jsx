@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import CustomButton from '../../components/CustomButton';
 import { BACKEND_URL } from '../../constants/config';
 import { authService } from '../../services/api';
-
+// Currently has same functionality as the home page, should show family members
 const FamilyMembers = () => {
     const [expenses, setExpenses] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -57,8 +57,8 @@ const FamilyMembers = () => {
           />
         </View>
         <CustomButton
-          title="View Budgets"
-          handlePress={() => router.push('/budget')}
+          title="Add Member"
+          handlePress={() => router.push('/add-family-member')}
           containerStyles="mx-8 mt-6"
         />
       </SafeAreaView>

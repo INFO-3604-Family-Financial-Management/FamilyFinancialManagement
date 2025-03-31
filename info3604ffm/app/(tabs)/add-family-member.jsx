@@ -1,28 +1,38 @@
-import { View, Text, SafeAreaView, TouchableOpacity, TextInput} from 'react-native'
-import {router} from 'expo-router'
-import React, {useState} from 'react'
-import FormField from '../../components/FormField'
+import { View, Text, SafeAreaView } from 'react-native'
+import React from 'react'
+import { useState } from 'react'
+import { router } from 'expo-router'
 import Checkbox from 'expo-checkbox';
-import CustomButton from '../../components/CustomButton';
+import FormField from '../../components/FormField'
+import CustomButton from '../../components/CustomButton'
 
-const EditFamily = (userID) => {
-
-const [parentIsChecked, parentSetChecked] = useState(false);
-const [childIsChecked, childSetChecked] = useState(false);
+const AddFamilyMember = () => {
+    const [parentIsChecked, parentSetChecked] = useState(false);
+    const [childIsChecked, childSetChecked] = useState(false);
+    const [form, setForm] = useState({
+        name: "", 
+        income: "",
+    })
   return (
-    <SafeAreaView className='bg-gray-500 h-full'>
+    <SafeAreaView className="bg-gray-500 h-full">
         <View className='mt-10 items-center'>
-            <Text className='text-black font-bold text-3xl'>EditFamily</Text>
+            <Text className='text-black font-bold text-3xl'>Add Family Member</Text>
         </View>
         <View className='bg-gray-500 p-4 rounded-lg m-4 mt-10 h-[65vh]'>
             <FormField
                 title='Name'
-                value={userID.name}
+                value={form.name}
                 handleChangeText={(e) => setForm({...form, name: e})}
                 otherStyles='mt-7'
             />
+            <FormField
+                title='Income'
+                value={form.amount}
+                handleChangeText={(e) => setForm({...form, income: e})}
+                otherStyles='mt-7'
+            />
             <View className='mt-10'>
-                <Text className='text-base text-gray-100 text-medium'>Role</Text>
+                <Text className='text-base text-gray-100 text-medium'>Type</Text>
                 <View className='border-2 border-white w-full p-4 bg-white rounded-2xl focus:border-black'>
                     {/* Edit so only one can be selected at a time */}
                     {/* Find a way to make the box and title on same line i cba rn */}
@@ -40,18 +50,17 @@ const [childIsChecked, childSetChecked] = useState(false);
             <CustomButton
                 title="Save"
                 // change to handlePress={submit}
-                handlePress={() => router.push("/family")}
+                handlePress={() => router.push("/family-members")}
                 containerStyles="mx-8 mt-10 w-half"
              />
              <CustomButton
                 title="Cancel"
-                handlePress={() => router.push("/family")}
+                handlePress={() => router.push("/family-members")}
                 containerStyles="mx-8 mt-5 w-half"
              />
         </View>
     </SafeAreaView>
-
   )
 }
 
-export default EditFamily
+export default AddFamilyMember
