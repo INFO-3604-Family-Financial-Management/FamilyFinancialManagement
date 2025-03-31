@@ -22,7 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
-        fields = ['id', 'user', 'amount', 'description', 'date']
+        fields = ['id', 'user', 'amount', 'description', 'date', 'goal', 'budget']
         read_only_fields = ['user', 'date']
 
 from django.core.exceptions import ValidationError

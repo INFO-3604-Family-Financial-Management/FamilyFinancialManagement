@@ -44,7 +44,23 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
         return Expense.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        goal_id = self.request.data.get('goal')
+        budget_id = self.request.data.get('budget')
+
+        goal = Goal.objects.filter(id=goal_id, user=self.request.user).first() if goal_id else None
+        budget = Budget.objects.filter(id=budget_id, user=self.request.user).first() if budget_id else None
+
+        expense = serializer.save(user=self.request.user, goal=goal, budget=budget)
+
+        # Update goal progress
+        if goal:
+            goal.amount -= expense.amount
+            goal.save()
+
+        # Update budget progress
+        if budget:
+            budget.amount -= expense.amount
+            budget.save()
 
 class ExpenseDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ExpenseSerializer

@@ -18,6 +18,8 @@ class Expense(models.Model):
     description = models.CharField(max_length=255)
     date = models.DateField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    goal = models.ForeignKey('Goal', on_delete=models.SET_NULL, null=True, blank=True)  # Optional link to a goal
+    budget = models.ForeignKey('Budget', on_delete=models.SET_NULL, null=True, blank=True)  # Optional link to a budget
 
     def __str__(self):
         return f"{self.user.username} - {self.amount} - {self.date}"
