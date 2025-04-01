@@ -54,7 +54,7 @@ const ExpenseTracking = () => {
   };
 
   return (
-    <SafeAreaView className="bg-primary h-full">
+    <SafeAreaView className="bg-gray-700 h-full">
       <ScrollView className="px-4 my-6">
         <Text className="text-tertiary text-2xl text-bold">Add Expense</Text>
         <FormField
