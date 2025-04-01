@@ -3,7 +3,9 @@ import logging
 from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import User 
-from rest_framework import generics, status, permissions
+from rest_framework import generics, status, permissions, viewsets
+from django.db import transaction
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer, GoalSerializer, IncomeSerializer
@@ -143,6 +145,7 @@ class MonthlyBudgetStatusView(APIView):
             'monthly_budget': monthly_budget,
             'remaining_budget': remaining_budget
         })
+    
 class GoalViewSet(viewsets.ModelViewSet):
     serializer_class = GoalSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -171,6 +174,7 @@ class GoalViewSet(viewsets.ModelViewSet):
         goal.pinned = False
         goal.save()
         return Response({'message': f'Goal "{goal.name}" has been unpinned.'}, status=status.HTTP_200_OK)
+    
 class GoalListCreateView(generics.ListCreateAPIView):
     serializer_class = GoalSerializer
     permission_classes = [permissions.IsAuthenticated]
