@@ -269,3 +269,102 @@ export const expenseService = {
     }
   }
 };
+
+export const familyManagementService = {
+  // Add a new family member
+  async addFamilyMember(memberData) {
+    try {
+      const response = await fetchWithAuth('/api/family-members/', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: memberData.name,
+          email: memberData.email,
+          relationship: memberData.relationship
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to add family member');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Add family member error:', error);
+      throw error;
+    }
+  },
+  // Edit a family member
+  async editFamilyMember(memberId, memberData) {
+    try {
+      const response = await fetchWithAuth(`/api/family-members/${memberId}/`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: memberData.name,
+          email: memberData.email,
+          relationship: memberData.relationship
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to edit family member');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Edit family member error:', error);
+      throw error;
+    }
+  },
+  // Delete a family member
+  async deleteFamilyMember(memberId) {
+    try {
+      const response = await fetchWithAuth(`/api/family-members/${memberId}/`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to delete family member');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Delete family member error:', error);
+      throw error;
+    }
+  },
+  // Get all family members
+  async getFamilyMembers() {
+    try {
+      const response = await fetchWithAuth('/api/family-members/');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to fetch family members');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get family members error:', error);
+      throw error;
+    }
+  },
+  // Get a specific family member
+  async getFamilyMember(memberId) {
+    try {
+      const response = await fetchWithAuth(`/api/family-members/${memberId}/`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to fetch family member');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get family member error:', error);
+      throw error;
+    }
+  }
+};
