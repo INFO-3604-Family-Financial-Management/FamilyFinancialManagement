@@ -24,6 +24,11 @@ class ExpenseSerializer(serializers.ModelSerializer):
         model = Expense
         fields = ['id', 'user', 'amount', 'description', 'date', 'goal', 'budget']
         read_only_fields = ['user', 'date']
+    
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
 
 from django.core.exceptions import ValidationError
 
@@ -88,8 +93,13 @@ class BudgetSerializer(serializers.ModelSerializer):
 class GoalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Goal
-        fields = ['id', 'user', 'family', 'name', 'amount', 'goal_type', 'is_personal', 'created_at']
+        fields = ['id', 'user', 'family', 'name', 'amount', 'goal_type', 'is_personal', 'pinned', 'created_at']
         read_only_fields = ['user', 'created_at']
+
+    def validate_target_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Target amount must be greater than zero.")
+        return value
 
 class IncomeSerializer(serializers.ModelSerializer):
     class Meta:

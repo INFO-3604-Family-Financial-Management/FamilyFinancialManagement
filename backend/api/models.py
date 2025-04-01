@@ -59,6 +59,7 @@ class Goal(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     goal_type = models.CharField(max_length=10, choices=GOAL_TYPE_CHOICES)
     is_personal = models.BooleanField(default=True)
+    pinned = models.BooleanField(default=False)  #track if goal is pinned
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

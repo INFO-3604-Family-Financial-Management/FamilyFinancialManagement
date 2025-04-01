@@ -143,7 +143,34 @@ class MonthlyBudgetStatusView(APIView):
             'monthly_budget': monthly_budget,
             'remaining_budget': remaining_budget
         })
+class GoalViewSet(viewsets.ModelViewSet):
+    serializer_class = GoalSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+
+    @action(detail=True, methods=['post'])
+    def pin(self, request, pk=None):
+        goal = self.get_object()
+
+        # Unpin all other goals for this user
+        Goal.objects.filter(user=request.user, pinned=True).update(pinned=False)
+
+        # Pin the selected goal
+        goal.pinned = True
+        goal.save()
+        return Response({'message': f'Goal "{goal.name}" has been pinned.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def unpin(self, request, pk=None):
+        goal = self.get_object()
+
+        # Unpin the selected goal
+        goal.pinned = False
+        goal.save()
+        return Response({'message': f'Goal "{goal.name}" has been unpinned.'}, status=status.HTTP_200_OK)
 class GoalListCreateView(generics.ListCreateAPIView):
     serializer_class = GoalSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -162,6 +189,32 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                # Lock the goal row for update
+                goal = Goal.objects.select_for_update().get(pk=kwargs['pk'], user=request.user)
+                
+                # Update goal logic
+                amount_saved = request.data.get('amount_saved', None)
+                if amount_saved is not None:
+                    goal.amount_saved += float(amount_saved)
+                    if goal.amount_saved > goal.target_amount:
+                        return Response(
+                            {"error": "Amount saved exceeds the target amount."},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
+                # Save the updated goal
+                goal.save()
+                serializer = self.get_serializer(goal)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        except Goal.DoesNotExist:
+            return Response({"error": "Goal not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error updating goal: {str(e)}")
+            return Response({"error": "An error occurred while updating the goal."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class IncomeListCreateView(generics.ListCreateAPIView):
     serializer_class = IncomeSerializer
