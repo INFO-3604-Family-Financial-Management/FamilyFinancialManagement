@@ -41,3 +41,4 @@ app-example
 env/
 
 *.pyc
+*.cpython-313.pyc
