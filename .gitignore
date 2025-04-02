@@ -39,3 +39,5 @@ app-example
 
 # Ignore the env folder
 env/
+
+*.pyc
