@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { BACKEND_URL } from '@/constants/config';
-import { Platform, AsyncStorage } from 'react-native';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Secure Storage Keys
 const ACCESS_TOKEN_KEY = 'tfr_access_token';
@@ -265,6 +265,21 @@ export const expenseService = {
       return await response.json();
     } catch (error) {
       console.error('Add expense error:', error);
+      throw error;
+    }
+  },
+  async getRecentExpenses() {
+    try {
+      const response = await fetchWithAuth('/api/expenses/recent/');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to fetch recent expenses');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get recent expenses error:', error);
       throw error;
     }
   }

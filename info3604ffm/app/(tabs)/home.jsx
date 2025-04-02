@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
-import axios from 'axios';
 import { router } from 'expo-router';
 import CustomButton from '../../components/CustomButton';
-import { BACKEND_URL } from '../../constants/config';
-import { authService } from '../../services/api';
+import { expenseService } from '../../services/api';
 
 const LatestCustomers = () => {
   const [expenses, setExpenses] = useState([]);
@@ -12,13 +10,8 @@ const LatestCustomers = () => {
 
   const fetchRecentExpenses = async () => {
     try {
-      const token = await authService.getAccessToken();
-      const response = await axios.get(`${BACKEND_URL}/api/expenses/recent/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setExpenses(response.data);
+      const data = await expenseService.getRecentExpenses();
+      setExpenses(data);
     } catch (error) {
       console.error('Error fetching recent expenses:', error);
     }
