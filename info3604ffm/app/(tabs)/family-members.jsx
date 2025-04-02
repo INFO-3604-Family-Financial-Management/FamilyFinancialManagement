@@ -5,15 +5,14 @@ import CustomButton from '../../components/CustomButton';
 import { familyManagementService } from '../../services/api';
 
 const FamilyMembers = () => {
-  const [familyData, setFamilyData] = useState({ name: '', members: [] });
+  const [familyMembers, setFamilyMembers] = useState([]); // Store family members
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchFamilyMembers = async () => {
     try {
-      // Keep your hardcoded ID for now
-      const response = await familyManagementService.getFamilyMembers(3);
+      const response = await familyManagementService.getFamilyMembers();
       console.log('Family response:', response); // Log for debugging
-      setFamilyData(response);
+      setFamilyMembers(response); // Set the family members data
     } catch (error) {
       console.error('Error fetching family members:', error);
     }
@@ -33,17 +32,16 @@ const FamilyMembers = () => {
     <SafeAreaView className="bg-gray-500 h-full">
       <View className="mt-10 items-center">
         <Text className="text-black text-2xl">Family Members</Text>
-        {familyData.name && <Text className="text-black text-lg">{familyData.name}</Text>}
       </View>
       <View className="bg-white p-4 rounded-lg items-center justify-center text shadow-md m-4 mt-10 h-[65vh]">
-        {!familyData.members || familyData.members.length === 0 ? (
+        {familyMembers.length === 0 ? (
           <View className="items-center justify-center h-full">
             <Text className="text-gray-500 text-lg">No family members added yet.</Text>
           </View>
         ) : (
           <FlatList
             className="w-full"
-            data={familyData.members}
+            data={familyMembers}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({ item }) => (
               <View className="items-center justify py-3 border-b border-gray-200 last:border-b-0">

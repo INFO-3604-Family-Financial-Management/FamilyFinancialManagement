@@ -351,13 +351,9 @@ export const familyManagementService = {
     }
   },
   // Get all family members
-  async getFamilyMembers(familyId) {
-    try {
-      const endpoint = familyId 
-        ? `/api/families/${familyId}/` 
-        : `/api/families/`;
-        
-      const response = await fetchWithAuth(endpoint);
+  async getFamilyMembers() {
+    try {        
+      const response = await fetchWithAuth('api/family/');
 
       if (!response.ok) {
         const errorData = await response.json();

@@ -114,6 +114,19 @@ class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
         else:
             instance.save()
 
+class FamilyMemberListView(generics.ListAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user_id = self.request.user.id
+        family_id = Family.objects.filter(members=user_id).first()
+        if(not family_id):    
+            return User.objects.none()
+        family_id = family_id.id
+        family = Family.objects.get(id=family_id)
+        return family.members.all()
+
 class BudgetListCreateView(generics.ListCreateAPIView):
     serializer_class = BudgetSerializer
     permission_classes = [permissions.IsAuthenticated]

@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/transactions', RecentExpensesView.as_view(), name='view-transactions'),
     path('api/families/', FamilyListCreateView.as_view(), name='family-list-create'),
     path('api/families/<int:pk>/', FamilyDetailView.as_view(), name='family-detail'),
+    path('api/family/', FamilyMemberListView.as_view(), name='family-member-list'),
     path('api/budgets/', BudgetListCreateView.as_view(), name='budget-list-create'),
     path('api/budgets/<int:pk>/', BudgetDetailView.as_view(), name='budget-detail'),
     path('api/monthly-budget-status/', MonthlyBudgetStatusView.as_view(), name='monthly-budget-status'),
