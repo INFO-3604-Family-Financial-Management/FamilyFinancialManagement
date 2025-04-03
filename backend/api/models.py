@@ -7,10 +7,22 @@ from django.contrib.auth.models import User
 
 class Family(models.Model):
     name = models.CharField(max_length=255)
-    members = models.ManyToManyField(User, related_name='families')
+    members = models.ManyToManyField(User, through='FamilyMember', related_name='families')  # Use the custom intermediary model
 
     def __str__(self):
         return self.name
+
+class FamilyMember(models.Model):
+    family = models.ForeignKey('Family', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=255, default='parent')  # Add the role field
+
+    class Meta:
+        db_table = 'api_family_members'  # Explicitly name the table
+        unique_together = ('family', 'user')  # Ensure no duplicate entries
+
+    def __str__(self):
+        return f"{self.user.username} - {self.family.name} - {self.role}"
 
 class Expense(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

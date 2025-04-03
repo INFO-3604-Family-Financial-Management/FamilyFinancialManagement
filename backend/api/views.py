@@ -115,7 +115,7 @@ class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
             instance.save()
 
 class FamilyMemberListView(generics.ListAPIView):
-    serializer_class = UserSerializer
+    serializer_class = FamilySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
@@ -123,9 +123,7 @@ class FamilyMemberListView(generics.ListAPIView):
         family_id = Family.objects.filter(members=user_id).first()
         if(not family_id):    
             return User.objects.none()
-        family_id = family_id.id
-        family = Family.objects.get(id=family_id)
-        return family.members.all()
+        return Family.objects.filter(members = user_id)
 
 class BudgetListCreateView(generics.ListCreateAPIView):
     serializer_class = BudgetSerializer
