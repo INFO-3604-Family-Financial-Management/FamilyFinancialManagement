@@ -106,10 +106,11 @@ export const authService = {
   // Refresh token when expired
   async refreshToken() {
     try {
+      let refreshToken;
       if(Platform.OS === 'web') {
-        const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+        refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
       } else{
-        const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+        refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
       }
       
       if (!refreshToken) {
@@ -244,7 +245,7 @@ export const fetchWithAuth = async (url, options = {}) => {
   }
 };
 
-
+// Expense service
 export const expenseService = {
   // Add a new expense
   async addExpense(expenseData) {
@@ -253,7 +254,9 @@ export const expenseService = {
         method: 'POST',
         body: JSON.stringify({
           description: expenseData.description,
-          amount: expenseData.amount
+          amount: expenseData.amount,
+          budget: expenseData.budget || null,
+          goal: expenseData.goal || null
         })
       });
 
@@ -268,117 +271,464 @@ export const expenseService = {
       throw error;
     }
   },
+  
+  // Get all expenses
+  async getExpenses() {
+    try {
+      const response = await fetchWithAuth('/api/expenses/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch expenses');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get expenses error:', error);
+      throw error;
+    }
+  },
+  
+  // Get recent expenses
   async getRecentExpenses() {
     try {
       const response = await fetchWithAuth('/api/expenses/recent/');
-
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to fetch recent expenses');
+        throw new Error('Failed to fetch recent expenses');
       }
-
+      
       return await response.json();
     } catch (error) {
       console.error('Get recent expenses error:', error);
       throw error;
     }
+  },
+  
+  // Update an expense
+  async updateExpense(id, expenseData) {
+    try {
+      const response = await fetchWithAuth(`/api/expenses/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(expenseData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update expense');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Update expense error:', error);
+      throw error;
+    }
+  },
+  
+  // Delete an expense
+  async deleteExpense(id) {
+    try {
+      const response = await fetchWithAuth(`/api/expenses/${id}/`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete expense');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Delete expense error:', error);
+      throw error;
+    }
   }
 };
 
-export const familyManagementService = {
-  // Add a new family member
-  async addFamilyMember(memberData) {
+// User Profile service
+export const profileService = {
+  // Get user profile
+  async getUserProfile() {
     try {
-      const response = await fetchWithAuth('/api/family-members/', {
+      const response = await fetchWithAuth('/api/profile/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get user profile error:', error);
+      throw error;
+    }
+  },
+  
+  // Get full user info (including profile)
+  async getUserInfo() {
+    try {
+      const response = await fetchWithAuth('/api/user-info/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user info');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get user info error:', error);
+      throw error;
+    }
+  },
+  
+  // Update user profile
+  async updateProfile(profileData) {
+    try {
+      const response = await fetchWithAuth('/api/profile/', {
+        method: 'PATCH',
+        body: JSON.stringify(profileData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+  }
+};
+
+// Family service
+export const familyService = {
+  // Get all families
+  async getFamilies() {
+    try {
+      const response = await fetchWithAuth('/api/families/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch families');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get families error:', error);
+      throw error;
+    }
+  },
+  
+  // Get a specific family
+  async getFamily(id) {
+    try {
+      const response = await fetchWithAuth(`/api/families/${id}/`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch family');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get family error:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new family
+  async createFamily(familyData) {
+    try {
+      const response = await fetchWithAuth('/api/families/', {
         method: 'POST',
-        body: JSON.stringify({
-          name: memberData.name,
-          email: memberData.email,
-          relationship: memberData.relationship
-        })
+        body: JSON.stringify(familyData)
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to add family member');
+        throw new Error('Failed to create family');
       }
-
+      
       return await response.json();
     } catch (error) {
-      console.error('Add family member error:', error);
+      console.error('Create family error:', error);
       throw error;
     }
   },
-  // Edit a family member
-  async editFamilyMember(memberId, memberData) {
+  
+  // Update a family
+  async updateFamily(id, familyData) {
     try {
-      const response = await fetchWithAuth(`/api/family-members/${memberId}/`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          name: memberData.name,
-          email: memberData.email,
-          relationship: memberData.relationship
-        })
+      const response = await fetchWithAuth(`/api/families/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(familyData)
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to edit family member');
+        throw new Error('Failed to update family');
       }
-
+      
       return await response.json();
     } catch (error) {
-      console.error('Edit family member error:', error);
+      console.error('Update family error:', error);
       throw error;
     }
   },
-  // Delete a family member
-  async deleteFamilyMember(memberId) {
+  
+  // Join a family (update user profile)
+  async joinFamily(familyId) {
     try {
-      const response = await fetchWithAuth(`/api/family-members/${memberId}/`, {
+      const response = await fetchWithAuth('/api/profile/', {
+        method: 'PATCH',
+        body: JSON.stringify({ family: familyId })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to join family');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Join family error:', error);
+      throw error;
+    }
+  },
+  
+  // Leave family (set family to null)
+  async leaveFamily() {
+    try {
+      const response = await fetchWithAuth('/api/profile/', {
+        method: 'PATCH',
+        body: JSON.stringify({ family: null })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to leave family');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Leave family error:', error);
+      throw error;
+    }
+  }
+};
+
+// Budget service
+export const budgetService = {
+  // Get all budgets
+  async getBudgets() {
+    try {
+      const response = await fetchWithAuth('/api/budgets/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch budgets');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get budgets error:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new budget
+  async createBudget(budgetData) {
+    try {
+      const response = await fetchWithAuth('/api/budgets/', {
+        method: 'POST',
+        body: JSON.stringify(budgetData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create budget');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Create budget error:', error);
+      throw error;
+    }
+  },
+  
+  // Update a budget
+  async updateBudget(id, budgetData) {
+    try {
+      const response = await fetchWithAuth(`/api/budgets/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(budgetData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update budget');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Update budget error:', error);
+      throw error;
+    }
+  },
+  
+  // Delete a budget
+  async deleteBudget(id) {
+    try {
+      const response = await fetchWithAuth(`/api/budgets/${id}/`, {
         method: 'DELETE'
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to delete family member');
+        throw new Error('Failed to delete budget');
       }
-
+      
       return await response.json();
     } catch (error) {
-      console.error('Delete family member error:', error);
+      console.error('Delete budget error:', error);
       throw error;
     }
-  },
-  // Get all family members
-  async getFamilyMembers() {
-    try {        
-      const response = await fetchWithAuth('api/family/');
+  }
+};
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to fetch family members');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Get family members error:', error);
-      throw error;
-    }
-  },
-  // Get a specific family member
-  async getFamilyMember(memberId) {
+// Goal service
+export const goalService = {
+  // Get all goals (including family goals)
+  async getGoals() {
     try {
-      const response = await fetchWithAuth(`/api/families/${memberId}/`);
-
+      const response = await fetchWithAuth('/api/goals/');
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to fetch family member');
+        throw new Error('Failed to fetch goals');
       }
-
+      
       return await response.json();
     } catch (error) {
-      console.error('Get family member error:', error);
+      console.error('Get goals error:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new goal
+  async createGoal(goalData) {
+    try {
+      const response = await fetchWithAuth('/api/goals/', {
+        method: 'POST',
+        body: JSON.stringify(goalData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create goal');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Create goal error:', error);
+      throw error;
+    }
+  },
+  
+  // Update a goal
+  async updateGoal(id, goalData) {
+    try {
+      const response = await fetchWithAuth(`/api/goals/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(goalData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update goal');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Update goal error:', error);
+      throw error;
+    }
+  },
+  
+  // Delete a goal
+  async deleteGoal(id) {
+    try {
+      const response = await fetchWithAuth(`/api/goals/${id}/`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete goal');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Delete goal error:', error);
+      throw error;
+    }
+  }
+};
+
+// Contribution service
+export const contributionService = {
+  // Get all contributions
+  async getContributions() {
+    try {
+      const response = await fetchWithAuth('/api/contributions/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch contributions');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get contributions error:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new contribution
+  async createContribution(contributionData) {
+    try {
+      const response = await fetchWithAuth('/api/contributions/', {
+        method: 'POST',
+        body: JSON.stringify(contributionData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create contribution');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Create contribution error:', error);
+      throw error;
+    }
+  }
+};
+
+// Streak service
+export const streakService = {
+  // Get user streak
+  async getStreak() {
+    try {
+      const response = await fetchWithAuth('/api/streaks/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch streak');
+      }
+      
+      const streaks = await response.json();
+      return streaks.length > 0 ? streaks[0] : null;
+    } catch (error) {
+      console.error('Get streak error:', error);
+      throw error;
+    }
+  },
+  
+  // Update streak
+  async updateStreak(id, streakData) {
+    try {
+      const response = await fetchWithAuth(`/api/streaks/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(streakData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update streak');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Update streak error:', error);
       throw error;
     }
   }
