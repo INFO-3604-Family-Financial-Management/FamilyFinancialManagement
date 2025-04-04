@@ -66,15 +66,15 @@ const CreateBudget = () => {
             />
         </View>
         <CustomButton
-        title="Cancel"
-        handlePress={() => router.push("/budget")}
-        containerStyles="mx-8 mt-10 w-half"
-      />
-      <CustomButton
-        title="Save"
-        handlePress={submit}
-        containerStyles="mx-8 mt-2 w-half"
-      />
+          title="Save"
+          handlePress={submit}
+          containerStyles="mx-8 mt-10 w-half"
+        />
+        <CustomButton
+          title="Cancel"
+          handlePress={() => router.push("/budget")}
+          containerStyles="mx-8 mt-2 w-half"
+        />
       </View>
     </SafeAreaView>
   );
