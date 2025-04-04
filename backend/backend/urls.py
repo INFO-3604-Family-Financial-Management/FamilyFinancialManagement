@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/families/<int:pk>/', FamilyDetailView.as_view(), name='family-detail'),
     path('api/family/', FamilyMemberListView.as_view(), name='family-member-list'),
     path('api/families/<int:pk>/members/', FamilyMemberManageView.as_view(), name='family-member-manage'),
+    path('api/user/familyID/', CurrentUserFamilyView.as_view(), name='current-user-family'),
     
     # Budget endpoints
     path('api/budgets/', BudgetListCreateView.as_view(), name='budget-list-create'),

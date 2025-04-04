@@ -1,18 +1,46 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import React, {useState} from "react";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
 import FormField from "@/components/FormField";
+import { budgetService } from '../../services/api';
 
 const CreateBudget = () => {
     const [form, setForm] = useState({
         category: '',
         amount: 0
     })
-    const submit = () => {
-
-    }
+    const submit = async () => {
+      try {
+        if (!form.category.trim()) {
+          Alert.alert('Error', 'Please enter a category');
+          return;
+        }
+        
+        if (!form.amount || isNaN(form.amount) || parseFloat(form.amount) <= 0) {
+          Alert.alert('Error', 'Please enter a valid amount greater than 0');
+          return;
+        }
+        
+        const budgetData = {
+          name: form.category, // Use category as name for simplicity
+          category: form.category,
+          amount: parseFloat(form.amount)
+        };
+        
+        await budgetService.createBudget(budgetData);
+        
+        Alert.alert(
+          'Success',
+          'Budget category created successfully',
+          [{ text: 'OK', onPress: () => router.push('/budget') }]
+        );
+      } catch (error) {
+        console.error('Create budget error:', error);
+        Alert.alert('Error', error.message || 'Failed to create budget category');
+      }
+    };
   return (
     <SafeAreaView className="bg-gray-500 h-full">
       <View className="mt-10 items-center">

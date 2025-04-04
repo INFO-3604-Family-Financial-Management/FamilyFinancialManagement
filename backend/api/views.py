@@ -9,10 +9,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer, GoalSerializer, IncomeSerializer
-from .serializers import *
+from .serializers import ContributionSerializer, StreakSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Expense, Family, Budget
-from .models import *
+from .models import Expense, Family, Budget, Goal, Income, Streak, Contribution
 
 # Logger instance for this module
 logger = logging.getLogger(__name__)
@@ -223,13 +222,20 @@ class MonthlyBudgetStatusView(APIView):
         user = request.user
         monthly_expenses = Expense.get_monthly_expenses(user)
         monthly_budget = Budget.get_monthly_budget(user)
-        remaining_budget = monthly_budget - monthly_expenses
+        monthly_income = Income.get_monthly_income(user)
+        remaining_budget = monthly_income - monthly_expenses - monthly_budget
 
         return Response({
             'monthly_expenses': monthly_expenses,
             'monthly_budget': monthly_budget,
+            'monthly_income': monthly_income,
             'remaining_budget': remaining_budget
         })
+    
+    def update_streak(self, user):
+        streak, created = Streak.objects.get_or_create(user=user)
+        streak.count += 1
+        streak.save()
     
 class GoalViewSet(viewsets.ModelViewSet):
     serializer_class = GoalSerializer
@@ -322,28 +328,6 @@ class IncomeDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Income.objects.filter(user=self.request.user)
 
-class MonthlyBudgetStatusView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        monthly_expenses = Expense.get_monthly_expenses(user)
-        monthly_budget = Budget.get_monthly_budget(user)
-        monthly_income = Income.get_monthly_income(user)
-        remaining_budget = monthly_income - monthly_expenses - monthly_budget
-
-        return Response({
-            'monthly_expenses': monthly_expenses,
-            'monthly_budget': monthly_budget,
-            'monthly_income': monthly_income,
-            'remaining_budget': remaining_budget
-        })
-    
-    def update_streak(self, user):
-        streak, created = Streak.objects.get_or_create(user=user)
-        streak.count += 1
-        streak.save()
-
 class ContributionListCreateView(generics.ListCreateAPIView):
     serializer_class = ContributionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -394,3 +378,19 @@ class StreakViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
+
+class CurrentUserFamilyView(generics.RetrieveAPIView):
+    serializer_class = FamilySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_object(self):
+        user = self.request.user
+        try:
+            # Get the family that the current user belongs to
+            family = Family.objects.filter(members=user).first()
+            if not family:
+                return None
+            return family
+        except Exception as e:
+            logger.error(f"Error retrieving user family: {e}")
+            return None
