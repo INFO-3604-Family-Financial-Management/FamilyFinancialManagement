@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Expense, Family, Budget, Goal, Income, Streak, Contribution
+from .models import Expense, Family, Budget, Goal, Streak, Contribution, UserProfile
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
@@ -16,7 +16,18 @@ class UserSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             password=validated_data['password']
         )
+        # Create a default UserProfile
+        UserProfile.objects.create(user=user)
         return user
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    
+    class Meta:
+        model = UserProfile
+        fields = ['user', 'username', 'email', 'family', 'monthly_income', 'created_at', 'last_updated']
+        read_only_fields = ['user', 'created_at', 'last_updated']
 
 class FamilySerializer(serializers.ModelSerializer):
     members_count = serializers.SerializerMethodField()
@@ -27,12 +38,6 @@ class FamilySerializer(serializers.ModelSerializer):
     
     def get_members_count(self, obj):
         return obj.members.count()
-
-class IncomeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Income
-        fields = ['id', 'amount', 'date', 'user', 'description', 'created_at']
-        read_only_fields = ['user', 'date', 'created_at']
 
 class BudgetSerializer(serializers.ModelSerializer):
     used_amount = serializers.SerializerMethodField()

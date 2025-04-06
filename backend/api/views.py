@@ -1,17 +1,21 @@
 import logging
 
 from django.utils import timezone
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User 
 from rest_framework import generics, status, permissions, viewsets
 from django.db import transaction
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer, GoalSerializer, IncomeSerializer
-from .serializers import ContributionSerializer, StreakSerializer
+from .serializers import (
+    UserSerializer, ExpenseSerializer, FamilySerializer, BudgetSerializer, 
+    GoalSerializer, ContributionSerializer, StreakSerializer, UserProfileSerializer
+)
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Expense, Family, Budget, Goal, Income, Streak, Contribution
+from .models import (
+    Expense, Family, Budget, Goal, Streak, Contribution, UserProfile
+)
 
 # Logger instance for this module
 logger = logging.getLogger(__name__)
@@ -87,43 +91,88 @@ class RecentExpensesView(generics.ListAPIView):
         return Expense.objects.filter(user=self.request.user).order_by('-created_at')[:5]
     
 class FamilyListCreateView(generics.ListCreateAPIView):
-    queryset = Family.objects.all()
     serializer_class = FamilySerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
+    def get_queryset(self):
+        # Return families the user is part of through their UserProfile
+        try:
+            user_profile = UserProfile.objects.get(user=self.request.user)
+            if user_profile.family:
+                return Family.objects.filter(id=user_profile.family.id)
+        except UserProfile.DoesNotExist:
+            pass
+        
+        # Also include families the user is directly part of (for backward compatibility)
+        return Family.objects.filter(members=self.request.user)
+
+    def perform_create(self, serializer):
+        family = serializer.save()
+        
+        # Add the creator to the family through their UserProfile
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        profile.family = family
+        profile.save()
+        
+        # Also add to direct members for backward compatibility
+        family.members.add(self.request.user)
 
 class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Family.objects.all()
     serializer_class = FamilySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
         logging.info(f"Filtering families for user: {user.username}")
+        
+        # Get families through UserProfile
+        try:
+            profile = UserProfile.objects.get(user=user)
+            if profile.family:
+                return Family.objects.filter(id=profile.family.id)
+        except UserProfile.DoesNotExist:
+            pass
+            
+        # Also include direct membership for backward compatibility
         return Family.objects.filter(members=user)
 
     def perform_destroy(self, instance):
+        # Remove user from family by updating their profile
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            if profile.family == instance:
+                profile.family = None
+                profile.save()
+        except UserProfile.DoesNotExist:
+            pass
+            
+        # Also remove from direct members
         instance.members.remove(self.request.user)
-        if instance.members.count() == 0:
+        
+        # If no profiles reference this family and no direct members, delete it
+        if not instance.members_profiles.exists() and instance.members.count() == 0:
             instance.delete()
-        else:
-            instance.save()
 
 class FamilyMemberListView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        user_id = self.request.user.id
-        family_id = Family.objects.filter(members=user_id).first()
-        if(not family_id):    
+        # Get family through UserProfile
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            if profile.family:
+                # Get all users who have profiles associated with this family
+                member_profiles = UserProfile.objects.filter(family=profile.family)
+                user_ids = member_profiles.values_list('user', flat=True)
+                return User.objects.filter(id__in=user_ids)
+        except UserProfile.DoesNotExist:
+            pass
+            
+        # Fallback to direct membership
+        family = Family.objects.filter(members=self.request.user).first()
+        if not family:    
             return User.objects.none()
-        family_id = family_id.id
-        family = Family.objects.get(id=family_id)
         return family.members.all()
 
 # Enhanced implementation to handle adding/removing family members
@@ -133,7 +182,7 @@ class FamilyMemberManageView(APIView):
     def post(self, request, pk):
         """Add a member to the family"""
         try:
-            family = Family.objects.get(pk=pk)
+            family = get_object_or_404(Family, pk=pk)
             username = request.data.get('username')
             
             if not username:
@@ -144,7 +193,15 @@ class FamilyMemberManageView(APIView):
                 
             try:
                 user = User.objects.get(username=username)
+                
+                # Update user's profile to reference this family
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                profile.family = family
+                profile.save()
+                
+                # Also add to direct members for backward compatibility
                 family.members.add(user)
+                
                 return Response(
                     {"message": f"User {username} added to family"}, 
                     status=status.HTTP_200_OK
@@ -164,7 +221,7 @@ class FamilyMemberManageView(APIView):
     def delete(self, request, pk):
         """Remove a member from the family"""
         try:
-            family = Family.objects.get(pk=pk)
+            family = get_object_or_404(Family, pk=pk)
             username = request.data.get('username')
             
             if not username:
@@ -175,8 +232,34 @@ class FamilyMemberManageView(APIView):
                 
             try:
                 user = User.objects.get(username=username)
+                
+                # Check if user is in the family (either through profile or direct membership)
+                is_member = False
+                
+                # Check profile
+                try:
+                    profile = UserProfile.objects.get(user=user)
+                    if profile.family == family:
+                        profile.family = None
+                        profile.save()
+                        is_member = True
+                except UserProfile.DoesNotExist:
+                    pass
+                
+                # Check direct membership
                 if user in family.members.all():
                     family.members.remove(user)
+                    is_member = True
+                
+                if is_member:
+                    # If no profiles reference this family and no direct members, delete it
+                    if not family.members_profiles.exists() and family.members.count() == 0:
+                        family.delete()
+                        return Response(
+                            {"message": f"User {username} removed from family. Family deleted as it now has no members."}, 
+                            status=status.HTTP_200_OK
+                        )
+                    
                     return Response(
                         {"message": f"User {username} removed from family"}, 
                         status=status.HTTP_200_OK
@@ -222,7 +305,16 @@ class MonthlyBudgetStatusView(APIView):
         user = request.user
         monthly_expenses = Expense.get_monthly_expenses(user)
         monthly_budget = Budget.get_monthly_budget(user)
-        monthly_income = Income.get_monthly_income(user)
+        
+        # Get monthly income from UserProfile
+        monthly_income = 0
+        try:
+            profile = UserProfile.objects.get(user=user)
+            monthly_income = profile.monthly_income
+        except UserProfile.DoesNotExist:
+            # Create profile if it doesn't exist
+            profile = UserProfile.objects.create(user=user, monthly_income=0)
+            
         remaining_budget = monthly_income - monthly_expenses - monthly_budget
 
         return Response({
@@ -243,7 +335,23 @@ class GoalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+        # Get user's family
+        family = None
+        try:
+            profile = UserProfile.objects.get(user=user)
+            family = profile.family
+        except UserProfile.DoesNotExist:
+            pass
+            
+        # Get personal goals
+        personal_goals = Goal.objects.filter(user=user)
+        
+        # Get family goals if user is in a family
+        if family:
+            family_goals = Goal.objects.filter(family=family, is_personal=False)
+            return personal_goals | family_goals
+            
+        return personal_goals
 
     @action(detail=True, methods=['post'])
     def pin(self, request, pk=None):
@@ -272,7 +380,23 @@ class GoalListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+        # Get user's family
+        family = None
+        try:
+            profile = UserProfile.objects.get(user=user)
+            family = profile.family
+        except UserProfile.DoesNotExist:
+            pass
+            
+        # Get personal goals
+        personal_goals = Goal.objects.filter(user=user)
+        
+        # Get family goals if user is in a family
+        if family:
+            family_goals = Goal.objects.filter(family=family, is_personal=False)
+            return personal_goals | family_goals
+            
+        return personal_goals
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -283,7 +407,23 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Goal.objects.filter(user=user) | Goal.objects.filter(family__members=user)
+        # Get user's family
+        family = None
+        try:
+            profile = UserProfile.objects.get(user=user)
+            family = profile.family
+        except UserProfile.DoesNotExist:
+            pass
+            
+        # Get personal goals
+        personal_goals = Goal.objects.filter(user=user)
+        
+        # Get family goals if user is in a family
+        if family:
+            family_goals = Goal.objects.filter(family=family, is_personal=False)
+            return personal_goals | family_goals
+            
+        return personal_goals
 
     def update(self, request, *args, **kwargs):
         try:
@@ -310,23 +450,61 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
         except Exception as e:
             logger.error(f"Error updating goal: {str(e)}")
             return Response({"error": "An error occurred while updating the goal."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-class IncomeListCreateView(generics.ListCreateAPIView):
-    serializer_class = IncomeSerializer
+            
+class UserProfileListCreateView(generics.ListCreateAPIView):
+    serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Income.objects.filter(user=self.request.user)
+        return UserProfile.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
+        # Make sure there's only one profile per user
+        UserProfile.objects.filter(user=self.request.user).delete()
         serializer.save(user=self.request.user)
 
-class IncomeDetailView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = IncomeSerializer
+class UserProfileDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return Income.objects.filter(user=self.request.user)
+    def get_object(self):
+        # Get or create profile for the current user
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            logger.info(f"Found existing profile for user {self.request.user.username}")
+            return profile
+        except UserProfile.DoesNotExist:
+            # Create a new profile if it doesn't exist
+            logger.info(f"Creating new profile for user {self.request.user.username}")
+            profile = UserProfile.objects.create(
+                user=self.request.user,
+                monthly_income=0.00
+            )
+            return profile
+        
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Partial update to allow updating just income or family
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # If family is updated, also update the direct relationship for backward compatibility
+        if 'family' in request.data:
+            family_id = request.data.get('family')
+            if family_id:
+                try:
+                    family = Family.objects.get(id=family_id)
+                    family.members.add(self.request.user)
+                except Family.DoesNotExist:
+                    pass
+            else:
+                # Remove from current families
+                for family in Family.objects.filter(members=self.request.user):
+                    family.members.remove(self.request.user)
+        
+        return Response(serializer.data)
 
 class ContributionListCreateView(generics.ListCreateAPIView):
     serializer_class = ContributionSerializer
@@ -343,7 +521,7 @@ class ContributionListCreateView(generics.ListCreateAPIView):
         user = contribution.user
         amount = contribution.amount
 
-        #update monthly budget
+        # Update monthly budget
         budget, created = Budget.objects.get_or_create(
             user=user,
             name=f"Contribution to {contribution.goal.name}",
@@ -353,11 +531,14 @@ class ContributionListCreateView(generics.ListCreateAPIView):
             budget.amount += amount
             budget.save()
 
-        #subtract from monthly income
-        income = Income.objects.filter(user=user).first()
-        if income:
-            income.amount -= amount
-            income.save()
+        # Subtract from monthly income in user profile
+        try:
+            profile = UserProfile.objects.get(user=user)
+            if profile.monthly_income >= amount:
+                profile.monthly_income -= amount
+                profile.save()
+        except UserProfile.DoesNotExist:
+            pass
 
 class ContributionDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ContributionSerializer
@@ -386,7 +567,12 @@ class CurrentUserFamilyView(generics.RetrieveAPIView):
     def get_object(self):
         user = self.request.user
         try:
-            # Get the family that the current user belongs to
+            # First try to get family through UserProfile
+            profile = UserProfile.objects.filter(user=user).first()
+            if profile and profile.family:
+                return profile.family
+                
+            # Fallback to direct membership
             family = Family.objects.filter(members=user).first()
             if not family:
                 return None

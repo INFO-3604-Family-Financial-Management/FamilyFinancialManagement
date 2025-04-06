@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { router } from 'expo-router'
 import CustomButton from '../../components/CustomButton'
@@ -78,6 +78,21 @@ const FamilyBudget = () => {
     return `$${parseFloat(amount).toFixed(2)}`;
   };
 
+  // Render item for each budget category
+  const renderBudgetItem = ({ item, index }) => (
+    <TouchableOpacity 
+      key={index}
+      className={`flex-row items-center justify-between w-full p-4 border border-gray-300 rounded-lg ${
+        index < budgets.length - 1 ? 'mb-4' : ''
+      }`}
+    >
+      <Text className="text-lg font-medium">{item.category}</Text>
+      <Text className="text-lg text-right font-medium">
+        {formatCurrency(item.spent)} / {formatCurrency(item.amount)}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView className="bg-gray-500 h-full">
       <View className="mt-10 items-center">
@@ -87,35 +102,30 @@ const FamilyBudget = () => {
         <Text className="text-2xl font-bold text-gray-900 text-center">
           {currentMonth}
         </Text>
-        <View className="flex-1 justify-center items-center bg-white p-4">
+        <View className="flex-1 bg-white">
           {loading ? (
-            <ActivityIndicator size="large" color="#0000ff" />
+            <View className="flex-1 justify-center items-center">
+              <ActivityIndicator size="large" color="#0000ff" />
+            </View>
           ) : error ? (
             <Text className="text-red-500 text-center">{error}</Text>
           ) : budgets.length === 0 ? (
             <Text className="text-gray-500 text-center">No budget categories found. Add a new category to get started.</Text>
           ) : (
             <>
-              {budgets.map((budget, index) => (
-                <TouchableOpacity 
-                  key={index}
-                  className={`flex-row items-center justify-between w-full p-4 border border-gray-300 rounded-lg ${
-                    index < budgets.length - 1 ? 'mb-4' : ''
-                  }`}
-                >
-                  <Text className="text-lg font-medium">{budget.category}</Text>
-                  <Text className="text-lg text-right font-medium">
-                    {formatCurrency(budget.spent)} / {formatCurrency(budget.amount)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <FlatList
+                data={budgets}
+                renderItem={renderBudgetItem}
+                keyExtractor={(item) => item.id.toString()}
+                className="w-full mb-4"
+                contentContainerStyle={{ paddingVertical: 8 }}
+                showsVerticalScrollIndicator={true}
+              />
               
-              <View>
-                <Text className="text-lg font-medium mt-10">
+              <View className="mt-2">
+                <Text className="text-lg font-medium">
                   Total Spent: {formatCurrency(totals.spent)}
                 </Text>
-              </View>
-              <View>
                 <Text className="text-lg font-medium">
                   Total Remaining: {formatCurrency(totals.remaining)}
                 </Text>

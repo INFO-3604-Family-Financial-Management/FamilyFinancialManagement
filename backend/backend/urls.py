@@ -40,9 +40,8 @@ urlpatterns = [
     path('api/goals/', GoalListCreateView.as_view(), name='goal-list-create'),
     path('api/goals/<int:pk>/', GoalDetailView.as_view(), name='goal-detail'),
     
-    # Income endpoints
-    path('api/income/', IncomeListCreateView.as_view(), name='income-list-create'),
-    path('api/income/<int:pk>/', IncomeDetailView.as_view(), name='income-detail'),
+    # UserProfile endpoints
+    path('api/profile/', UserProfileDetailView.as_view(), name='user-profile-detail'),
     
     # Contribution endpoints
     path('api/contributions/', ContributionListCreateView.as_view(), name='contribution-list-create'),

@@ -10,6 +10,8 @@ from decimal import Decimal
 
 class Family(models.Model):
     name = models.CharField(max_length=255)
+    # We'll remove the direct members field and access members through UserProfile
+    # This field is kept for backwards compatibility during migration
     members = models.ManyToManyField(User, related_name='families')
     
     class Meta:
@@ -20,12 +22,13 @@ class Family(models.Model):
     
     def total_members(self):
         """Return the total number of family members"""
-        return self.members.count()
+        return self.members_profiles.count()
     
     def get_total_family_budget(self):
         """Calculate the total budget for all family members"""
+        user_ids = self.members_profiles.values_list('user', flat=True)
         return Budget.objects.filter(
-            user__in=self.members.all()
+            user__in=user_ids
         ).aggregate(total=Sum('amount'))['total'] or 0
     
     def get_total_family_expenses(self, month=None, year=None):
@@ -34,27 +37,59 @@ class Family(models.Model):
         month = month or now.month
         year = year or now.year
         
+        user_ids = self.members_profiles.values_list('user', flat=True)
         return Expense.objects.filter(
-            user__in=self.members.all(),
+            user__in=user_ids,
             date__year=year,
             date__month=month
         ).aggregate(total=Sum('amount'))['total'] or 0
     
     def get_total_family_income(self, month=None, year=None):
         """Calculate the total income for all family members"""
-        now = timezone.now()
-        month = month or now.month
-        year = year or now.year
+        # Get all family members' profiles
+        profiles = self.members_profiles.all()
         
-        return Income.objects.filter(
-            user__in=self.members.all(),
-            date__year=year,
-            date__month=month
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        # Sum up the monthly income of all profiles
+        total_income = profiles.aggregate(total=Sum('monthly_income'))['total'] or 0
+        
+        return total_income
     
     def get_family_goals(self):
         """Get all family goals"""
         return Goal.objects.filter(family=self, is_personal=False)
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
+    family = models.ForeignKey('Family', on_delete=models.SET_NULL, null=True, blank=True, related_name='members_profiles')
+    monthly_income = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        default=Decimal('0.00')
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+    
+    @staticmethod
+    def get_monthly_income(user, month=None, year=None):
+        """Get the monthly income for a user"""
+        try:
+            profile = UserProfile.objects.get(user=user)
+            return profile.monthly_income
+        except UserProfile.DoesNotExist:
+            return Decimal('0.00')
+    
+    @staticmethod
+    def get_annual_income(user, year=None):
+        """Calculate total income for a year (monthly_income * 12)"""
+        try:
+            profile = UserProfile.objects.get(user=user)
+            return profile.monthly_income * 12
+        except UserProfile.DoesNotExist:
+            return Decimal('0.00')
 
 class Expense(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expenses')
@@ -90,8 +125,14 @@ class Expense(models.Model):
         if self.goal:
             if self.goal.is_personal and self.goal.user != self.user:
                 raise ValidationError("Personal goal must belong to the same user as the expense")
-            elif not self.goal.is_personal and not self.goal.family.members.filter(id=self.user.id).exists():
-                raise ValidationError("Family goal must belong to a family where the user is a member")
+            elif not self.goal.is_personal:
+                # Check if user's profile is connected to the goal's family
+                try:
+                    profile = UserProfile.objects.get(user=self.user)
+                    if not self.goal.family or profile.family != self.goal.family:
+                        raise ValidationError("Family goal must belong to the user's family")
+                except UserProfile.DoesNotExist:
+                    raise ValidationError("User must have a profile to associate with family goals")
     
     @staticmethod
     def get_monthly_expenses(user, month=None, year=None):
@@ -209,8 +250,14 @@ class Goal(models.Model):
             raise ValidationError("Family goals must have a family assigned")
         
         # Validate that the user is a member of the family for family goals
-        if not self.is_personal and self.family and not self.family.members.filter(id=self.user.id).exists():
-            raise ValidationError("User must be a member of the family for family goals")
+        if not self.is_personal and self.family:
+            # Check through UserProfile
+            try:
+                profile = UserProfile.objects.get(user=self.user)
+                if profile.family != self.family:
+                    raise ValidationError("User must be a member of the family for family goals")
+            except UserProfile.DoesNotExist:
+                raise ValidationError("User must have a profile to create family goals")
     
     def get_progress(self):
         """Calculate goal progress"""
@@ -239,70 +286,6 @@ class Goal(models.Model):
         # Run full validation before saving
         self.full_clean()
         super().save(*args, **kwargs)
-    
-class Income(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='incomes')
-    amount = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))]
-    )
-    date = models.DateField(auto_now_add=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    description = models.CharField(max_length=255, blank=True, null=True)  # New optional field for source of income
-    
-    class Meta:
-        ordering = ['-date']
-        indexes = [
-            models.Index(fields=['user', '-date']),
-        ]
-
-    def __str__(self):
-        return f"{self.user.username} - {self.amount} - {self.date}"
-
-    @staticmethod
-    def get_monthly_income(user, month=None, year=None):
-        now = timezone.now()
-        month = month or now.month
-        year = year or now.year
-        
-        return Income.objects.filter(
-            user=user,
-            date__year=year,
-            date__month=month
-        ).aggregate(total=Sum('amount'))['total'] or 0
-    
-    @staticmethod
-    def get_annual_income(user, year=None):
-        """Calculate total income for a year"""
-        now = timezone.now()
-        year = year or now.year
-        
-        return Income.objects.filter(
-            user=user,
-            date__year=year
-        ).aggregate(total=Sum('amount'))['total'] or 0
-    
-    @staticmethod
-    def get_average_monthly_income(user, year=None):
-        """Calculate average monthly income"""
-        now = timezone.now()
-        year = year or now.year
-        
-        # Get all months with income records
-        months = Income.objects.filter(
-            user=user,
-            date__year=year
-        ).dates('date', 'month')
-        
-        if not months:
-            return 0
-        
-        # Calculate total income for the year
-        annual_income = Income.get_annual_income(user, year)
-        
-        # Return average
-        return annual_income / len(months)
     
 class Streak(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='streaks')
@@ -364,8 +347,14 @@ class Contribution(models.Model):
         if self.goal.is_personal and self.goal.user != self.user:
             raise ValidationError("Users can only contribute to their own personal goals")
         
-        if not self.goal.is_personal and not self.goal.family.members.filter(id=self.user.id).exists():
-            raise ValidationError("Users can only contribute to family goals they are members of")
+        if not self.goal.is_personal:
+            # Check through UserProfile
+            try:
+                profile = UserProfile.objects.get(user=self.user)
+                if not profile.family or profile.family != self.goal.family:
+                    raise ValidationError("Users can only contribute to family goals they are members of")
+            except UserProfile.DoesNotExist:
+                raise ValidationError("User must have a profile to contribute to family goals")
     
     def save(self, *args, **kwargs):
         # Run full validation before saving

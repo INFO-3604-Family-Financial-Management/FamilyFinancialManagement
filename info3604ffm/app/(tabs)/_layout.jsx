@@ -303,6 +303,22 @@ const TabsLayout = () => {
             )
           }}
         />
+        <Tabs.Screen 
+          name="edit-profile"
+          options={{
+            title: 'Edit Profile',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Edit Profile"
+                focused={focused}
+              />
+            )
+          }}
+        />
       </Tabs>
     </>
   )

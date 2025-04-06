@@ -169,7 +169,7 @@ export const authService = {
   }
 };
 
-// Create a fetch wrapper with auth headers for protected endpoints
+// Enhanced fetchWithAuth function with better error handling
 export const fetchWithAuth = async (url, options = {}) => {
   try {
     let token = await authService.getAccessToken();
@@ -198,59 +198,175 @@ export const fetchWithAuth = async (url, options = {}) => {
       });
     }
 
-    try {
-      const response = await fetch(fullUrl, {
-        ...options,
-        headers,
-      });
-      
-      // Enhanced error logging in development
-      if (__DEV__) {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Response error:', {
-            status: response.status,
-            statusText: response.statusText,
-            data: errorData
-          });
-          
-          // Return early to avoid double parsing
-          return response;
-        }
-      } else if (!response.ok) {
-        await response.json().catch(() => ({}));
-        return response;
-      }
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers,
+    });
     
-      // If unauthorized, try to refresh token
-      if (response.status === 401) {
-        try {
-          token = await authService.refreshToken();
-          headers.Authorization = `Bearer ${token}`;
-          
-          if (__DEV__) {
-            console.log('Retrying request with new token');
-          }
-          
-          return fetch(fullUrl, {
-            ...options,
-            headers,
-          });
-        } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
-          throw new Error('Authentication failed. Please login again.');
-        }
-      }
+    // Enhanced error logging in development
+    if (__DEV__) {
+      console.log('Response status:', response.status);
       
-      return response;
-    } catch (error) {
-      console.error('API request error:', error);
-      throw error;
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          const errorData = await response.clone().json();
+          errorText = JSON.stringify(errorData);
+        } catch (e) {
+          try {
+            errorText = await response.clone().text();
+          } catch (e2) {
+            errorText = 'Could not parse error response';
+          }
+        }
+        
+        console.error('Response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+      }
     }
+  
+    // If unauthorized, try to refresh token
+    if (response.status === 401) {
+      try {
+        token = await authService.refreshToken();
+        headers.Authorization = `Bearer ${token}`;
+        
+        if (__DEV__) {
+          console.log('Retrying request with new token');
+        }
+        
+        return fetch(fullUrl, {
+          ...options,
+          headers,
+        });
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        throw new Error('Authentication failed. Please login again.');
+      }
+    }
+    
+    return response;
   } catch (error) {
     console.error('API request error:', error);
     throw error;
+  }
+};
+
+// Profile service for managing user profile including income
+export const profileService = {
+  // Get the user profile
+  async getUserProfile() {
+    try {
+      console.log('Attempting to fetch user profile');
+      
+      const response = await fetchWithAuth('/api/profile/');
+      console.log('Profile response status:', response.status);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('Profile not found, returning default');
+          return { monthly_income: 0, family: null };
+        }
+        
+        // Try to get more detailed error info
+        let errorData = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If we can't parse JSON, use a simple message
+        }
+        
+        const errorMessage = errorData.detail || 'Failed to fetch user profile';
+        console.error('Profile fetch error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      console.log('Profile data received:', data);
+      return data;
+    } catch (error) {
+      console.error('Get user profile error:', error.message);
+      throw error;
+    }
+  },
+  
+  // Update user profile including monthly income and family
+  async updateUserProfile(profileData) {
+    try {
+      console.log('Updating profile with data:', profileData);
+      
+      const updateData = {};
+      
+      // Only include fields that are provided
+      if (profileData.monthly_income !== undefined) {
+        updateData.monthly_income = parseFloat(profileData.monthly_income);
+      }
+      
+      if (profileData.family !== undefined) {
+        updateData.family = profileData.family;
+      }
+      
+      const response = await fetchWithAuth('/api/profile/', {
+        method: 'PATCH',
+        body: JSON.stringify(updateData)
+      });
+      
+      console.log('Update profile response status:', response.status);
+      
+      if (!response.ok) {
+        let errorData = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If we can't parse JSON, use a simple message
+        }
+        
+        const errorMessage = errorData.detail || 'Failed to update user profile';
+        console.error('Profile update error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      console.log('Profile update successful:', data);
+      return data;
+    } catch (error) {
+      console.error('Update user profile error:', error.message);
+      throw error;
+    }
+  },
+  
+  // Get user's family
+  async getUserFamily() {
+    try {
+      const profile = await this.getUserProfile();
+      return profile.family;
+    } catch (error) {
+      console.error('Get user family error:', error);
+      return null;
+    }
+  },
+  
+  // Join a family
+  async joinFamily(familyId) {
+    try {
+      return await this.updateUserProfile({ family: familyId });
+    } catch (error) {
+      console.error('Join family error:', error);
+      throw error;
+    }
+  },
+  
+  // Leave current family
+  async leaveFamily() {
+    try {
+      return await this.updateUserProfile({ family: null });
+    } catch (error) {
+      console.error('Leave family error:', error);
+      throw error;
+    }
   }
 };
 
@@ -348,10 +464,31 @@ export const expenseService = {
       console.error('Delete expense error:', error);
       throw error;
     }
+  },
+  
+  // Get monthly budget status
+  async getMonthlyBudgetStatus() {
+    try {
+      const response = await fetchWithAuth('/api/monthly-budget-status/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch monthly budget status');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get monthly budget status error:', error);
+      return {
+        monthly_expenses: 0,
+        monthly_budget: 0,
+        monthly_income: 0,
+        remaining_budget: 0
+      };
+    }
   }
 };
 
-// Family service
+// Family service (updated to work with UserProfile-based membership)
 export const familyService = {
   // Get all families
   async getFamilies() {
@@ -385,49 +522,6 @@ export const familyService = {
     }
   },
   
-  async getFamily() {
-    try {
-      // First get all families
-      const response = await fetchWithAuth('/api/families/');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch families');
-      }
-      
-      const families = await response.json();
-      
-      // If no families exist, return null
-      if (!families || families.length === 0) {
-        return null;
-      }
-  
-      // Get the current user's family members to identify the family they belong to
-      const familyMembersResponse = await fetchWithAuth('/api/family/');
-      
-      if (!familyMembersResponse.ok) {
-        // If we can't get family members, just return the first family as a fallback
-        console.warn('Could not determine specific family, using first available');
-        return families[0];
-      }
-      
-      const familyData = await familyMembersResponse.json();
-      
-      // The /api/family/ endpoint should return data that includes the family ID
-      // If it does, use that to find the correct family
-      if (familyData && familyData.family_id) {
-        const userFamily = families.find(f => f.id === familyData.family_id);
-        return userFamily || families[0]; // Return user's family or first as fallback
-      }
-      
-      // If we can't determine specific family, return the first one
-      return families[0];
-    }
-    catch (error) {
-      console.error('Get family error:', error);
-      throw error;
-    }
-  },
-
   // Create a new family
   async createFamily(familyData) {
     try {
@@ -447,44 +541,6 @@ export const familyService = {
     }
   },
   
-  // Add a member to a family
-  async addFamilyMember(familyId, username) {
-    try {
-      const response = await fetchWithAuth(`/api/families/${familyId}/members/`, {
-        method: 'POST',
-        body: JSON.stringify({ username })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to add family member');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Add family member error:', error);
-      throw error;
-    }
-  },
-  
-  // Remove a member from a family
-  async removeFamilyMember(familyId, username) {
-    try {
-      const response = await fetchWithAuth(`/api/families/${familyId}/members/`, {
-        method: 'DELETE',
-        body: JSON.stringify({ username })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to remove family member');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Remove family member error:', error);
-      throw error;
-    }
-  },
-
   // Get current user's family
   async getCurrentUserFamily() {
     try {
@@ -501,6 +557,65 @@ export const familyService = {
       return await response.json();
     } catch (error) {
       console.error('Get user family error:', error);
+      throw error;
+    }
+  }
+};
+
+// Family management service (separate service for managing family members)
+export const familyManagementService = {
+  // Get family members
+  async getFamilyMembers() {
+    try {
+      const response = await fetchWithAuth('/api/family/');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch family members');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get family members error:', error);
+      throw error;
+    }
+  },
+  
+  // Add a member to family
+  async addFamilyMember(familyId, username) {
+    try {
+      const response = await fetchWithAuth(`/api/families/${familyId}/members/`, {
+        method: 'POST',
+        body: JSON.stringify({ username })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add family member');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Add family member error:', error);
+      throw error;
+    }
+  },
+  
+  // Remove a member from family
+  async removeFamilyMember(familyId, username) {
+    try {
+      const response = await fetchWithAuth(`/api/families/${familyId}/members/`, {
+        method: 'DELETE',
+        body: JSON.stringify({ username })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove family member');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Remove family member error:', error);
       throw error;
     }
   }
@@ -580,22 +695,6 @@ export const budgetService = {
       return await response.json();
     } catch (error) {
       console.error('Delete budget error:', error);
-      throw error;
-    }
-  },
-  
-  // Get monthly budget status
-  async getMonthlyBudgetStatus() {
-    try {
-      const response = await fetchWithAuth('/api/monthly-budget-status/');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch monthly budget status');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Get monthly budget status error:', error);
       throw error;
     }
   }
@@ -759,65 +858,6 @@ export const contributionService = {
   }
 };
 
-// Income service
-export const incomeService = {
-  // Get all income entries
-  async getIncome() {
-    try {
-      const response = await fetchWithAuth('/api/income/');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch income');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Get income error:', error);
-      throw error;
-    }
-  },
-  
-  // Add a new income entry
-  async addIncome(incomeData) {
-    try {
-      const response = await fetchWithAuth('/api/income/', {
-        method: 'POST',
-        body: JSON.stringify({
-          amount: parseFloat(incomeData.amount),
-          description: incomeData.description || ''
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to add income');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Add income error:', error);
-      throw error;
-    }
-  },
-  
-  // Delete an income entry
-  async deleteIncome(id) {
-    try {
-      const response = await fetchWithAuth(`/api/income/${id}/`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete income');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Delete income error:', error);
-      throw error;
-    }
-  }
-};
-
 // Streak service
 export const streakService = {
   // Get user streak
@@ -852,65 +892,6 @@ export const streakService = {
       return await response.json();
     } catch (error) {
       console.error('Update streak error:', error);
-      throw error;
-    }
-  }
-};
-
-// Unified service for family management (for existing components)
-export const familyManagementService = {
-  // Get family members
-  async getFamilyMembers() {
-    try {
-      const response = await fetchWithAuth('/api/family/');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch family members');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Get family members error:', error);
-      throw error;
-    }
-  },
-  
-  // Add a member to family
-  async addFamilyMember(familyId, username) {
-    try {
-      const response = await fetchWithAuth(`/api/families/${familyId}/members/`, {
-        method: 'POST',
-        body: JSON.stringify({ username })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add family member');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Add family member error:', error);
-      throw error;
-    }
-  },
-  
-  // Remove a member from family
-  async removeFamilyMember(familyId, username) {
-    try {
-      const response = await fetchWithAuth(`/api/families/${familyId}/members/`, {
-        method: 'DELETE',
-        body: JSON.stringify({ username })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to remove family member');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Remove family member error:', error);
       throw error;
     }
   }
