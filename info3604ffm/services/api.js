@@ -621,6 +621,52 @@ export const familyManagementService = {
   }
 };
 
+export const familyFinanceService = {
+    // Get family financial data (e.g., income, expenses, savings)
+    async getFamilyFinancialData() {
+      try {
+        const response = await fetchWithAuth('/api/family/finances/');
+        if (!response.ok) {
+          throw new Error('Failed to fetch family financial data');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Get family financial data error:', error);
+        throw error;
+      }
+    },
+    // Get family income
+    async getFamilyIncome() {
+      try {
+        const response = await fetchWithAuth('/api/family/income/');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch family income');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Get family income error:', error);
+        return { total_income: 0 }; // Default fallback
+      }
+    },
+    // Get family expenses
+    async getFamilyExpenses() {
+      try {
+        const response = await fetchWithAuth('/api/family/expenses/');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch family expenses');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Get family expenses error:', error);
+        return { total_expenses: 0 }; // Default fallback
+      }
+    }
+};
+
 // Budget service
 export const budgetService = {
   // Get all budgets

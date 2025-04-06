@@ -1,5 +1,6 @@
 import logging
 
+from django.db.models import Sum
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User 
@@ -580,3 +581,180 @@ class CurrentUserFamilyView(generics.RetrieveAPIView):
         except Exception as e:
             logger.error(f"Error retrieving user family: {e}")
             return None
+        
+class FamilyFinancesView(APIView):
+    """
+    View to get the complete financial data for a family (income, expenses, savings)
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get the user's profile to find their family
+            try:
+                profile = UserProfile.objects.get(user=request.user)
+                family = profile.family
+            except UserProfile.DoesNotExist:
+                return Response(
+                    {"error": "User profile not found"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if not family:
+                return Response(
+                    {"error": "User is not part of a family"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get the current month and year
+            now = timezone.now()
+            current_month = now.month
+            current_year = now.year
+            
+            # Get all profiles for family members
+            family_profiles = UserProfile.objects.filter(family=family)
+            
+            # Calculate total family income (sum of all members' monthly incomes)
+            total_income = family_profiles.aggregate(
+                total=Sum('monthly_income')
+            )['total'] or 0
+            
+            # Get all user IDs in the family
+            family_user_ids = family_profiles.values_list('user_id', flat=True)
+            
+            # Calculate total family expenses for the current month
+            total_expenses = Expense.objects.filter(
+                user_id__in=family_user_ids,
+                date__year=current_year,
+                date__month=current_month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # Calculate savings (income - expenses)
+            savings = total_income - total_expenses
+            if savings < 0:
+                savings = 0
+            
+            # Get family details
+            family_data = {
+                "id": family.id,
+                "name": family.name,
+                "member_count": family_profiles.count()
+            }
+            
+            return Response({
+                "family": family_data,
+                "finances": {
+                    "total_income": total_income,
+                    "total_expenses": total_expenses,
+                    "total_savings": savings,
+                    "month": current_month,
+                    "year": current_year
+                }
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class FamilyIncomeView(APIView):
+    """
+    View to get the total income for a family (sum of all members' monthly incomes)
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get the user's profile to find their family
+            try:
+                profile = UserProfile.objects.get(user=request.user)
+                family = profile.family
+            except UserProfile.DoesNotExist:
+                return Response(
+                    {"error": "User profile not found"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if not family:
+                return Response(
+                    {"error": "User is not part of a family"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get all profiles for family members
+            family_profiles = UserProfile.objects.filter(family=family)
+            
+            # Calculate total family income
+            total_income = family_profiles.aggregate(
+                total=Sum('monthly_income')
+            )['total'] or 0
+            
+            return Response({
+                "family_id": family.id,
+                "family_name": family.name,
+                "total_income": total_income
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class FamilyExpensesView(APIView):
+    """
+    View to get the total expenses for a family (sum of all members' expenses for the current month)
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get the user's profile to find their family
+            try:
+                profile = UserProfile.objects.get(user=request.user)
+                family = profile.family
+            except UserProfile.DoesNotExist:
+                return Response(
+                    {"error": "User profile not found"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if not family:
+                return Response(
+                    {"error": "User is not part of a family"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get the current month and year
+            now = timezone.now()
+            current_month = now.month
+            current_year = now.year
+            
+            # Get all user IDs in the family
+            family_user_ids = UserProfile.objects.filter(
+                family=family
+            ).values_list('user_id', flat=True)
+            
+            # Calculate total family expenses for the current month
+            total_expenses = Expense.objects.filter(
+                user_id__in=family_user_ids,
+                date__year=current_year,
+                date__month=current_month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            return Response({
+                "family_id": family.id,
+                "family_name": family.name,
+                "total_expenses": total_expenses,
+                "month": current_month,
+                "year": current_year
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

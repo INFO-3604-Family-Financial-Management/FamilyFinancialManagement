@@ -1,14 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  RefreshControl,
-  ActivityIndicator,
-  Alert
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, SafeAreaView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +12,7 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Sorting and filtering states
   const [sortOrder, setSortOrder] = useState('newest'); // 'newest', 'oldest', 'highest', 'lowest'
   const [totalSpent, setTotalSpent] = useState(0);
@@ -34,10 +25,10 @@ const Expenses = () => {
   // Format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -46,14 +37,14 @@ const Expenses = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await expenseService.getExpenses();
       console.log(`Fetched ${data.length} expenses`);
-      
+
       // Calculate total spent
       const total = data.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
       setTotalSpent(total);
-      
+
       setExpenses(data);
       sortAndFilterExpenses(data, sortOrder);
     } catch (error) {
@@ -67,7 +58,7 @@ const Expenses = () => {
   // Sort and filter expenses
   const sortAndFilterExpenses = (data, order) => {
     let sorted = [...data];
-    
+
     // Apply sorting
     switch (order) {
       case 'newest':
@@ -85,7 +76,7 @@ const Expenses = () => {
       default:
         sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
-    
+
     setFilteredExpenses(sorted);
   };
 
@@ -102,7 +93,7 @@ const Expenses = () => {
       `Are you sure you want to delete "${description}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
+        {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
@@ -130,7 +121,7 @@ const Expenses = () => {
     useCallback(() => {
       console.log('Expenses screen in focus - refreshing data');
       fetchExpenses();
-      return () => {};
+      return () => { };
     }, [])
   );
 
@@ -153,7 +144,7 @@ const Expenses = () => {
       </View>
       <View className="flex-row items-center">
         <Text className="text-lg font-bold mr-4">{formatCurrency(item.amount)}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => handleDeleteExpense(item.id, item.description)}
           className="p-2"
         >
@@ -168,7 +159,7 @@ const Expenses = () => {
       <View className="p-4">
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-black text-2xl font-bold">All Expenses</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.back()}
             className="p-2"
           >
@@ -186,25 +177,25 @@ const Expenses = () => {
 
         {/* Sorting options */}
         <View className="bg-white rounded-lg p-2 mb-4 flex-row justify-around">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => handleSortChange('newest')}
             className={`py-1 px-3 rounded-lg ${sortOrder === 'newest' ? 'bg-gray-300' : ''}`}
           >
             <Text>Newest</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => handleSortChange('oldest')}
             className={`py-1 px-3 rounded-lg ${sortOrder === 'oldest' ? 'bg-gray-300' : ''}`}
           >
             <Text>Oldest</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => handleSortChange('highest')}
             className={`py-1 px-3 rounded-lg ${sortOrder === 'highest' ? 'bg-gray-300' : ''}`}
           >
             <Text>Highest</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => handleSortChange('lowest')}
             className={`py-1 px-3 rounded-lg ${sortOrder === 'lowest' ? 'bg-gray-300' : ''}`}
           >
@@ -253,7 +244,7 @@ const Expenses = () => {
 
       {/* Add Expense Button */}
       <View className="absolute bottom-5 right-5">
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => router.push('/expense-tracking')}
           className="bg-indigo-200 w-14 h-14 rounded-full items-center justify-center shadow-lg"
         >
