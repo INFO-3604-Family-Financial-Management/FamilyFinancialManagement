@@ -1,21 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, SafeAreaView, RefreshControl, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import CustomButton from '../../components/CustomButton';
 import { familyManagementService, familyService } from '../../services/api';
 
 const FamilyMembers = () => {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [familyData, setFamilyData] = useState(null);
 
   const fetchFamilyData = async () => {
     try {
       // First get all families (to get the current family's ID)
-      const families = await familyService.getFamilies();
-      if (families && families.length > 0) {
-        setFamilyData(families[0]); // Assume the first family is the user's current family
-        return families[0].id;
+      const family = await familyService.getCurrentUserFamily();
+      if (family) {
+        setFamilyData(family);
+        return family.id;
       }
       return null;
     } catch (error) {
@@ -26,35 +28,60 @@ const FamilyMembers = () => {
 
   const fetchFamilyMembers = async () => {
     try {
+      setLoading(true);
       const response = await familyManagementService.getFamilyMembers();
       console.log('Family members response:', response);
       setFamilyMembers(response);
     } catch (error) {
       console.error('Error fetching family members:', error);
       Alert.alert('Error', 'Failed to load family members');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  // This will run once on component mount
   useEffect(() => {
-    // Fetch family data and members on component mount
-    const loadData = async () => {
+    const loadInitialData = async () => {
       await fetchFamilyData();
       await fetchFamilyMembers();
     };
     
-    loadData();
+    loadInitialData();
   }, []);
+
+  // This will run every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Family members screen in focus - refreshing data');
+      const refreshData = async () => {
+        await fetchFamilyData();
+        await fetchFamilyMembers();
+      };
+      
+      refreshData();
+      
+      return () => {
+        // Optional cleanup function
+      };
+    }, [])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    await fetchFamilyData();
     await fetchFamilyMembers();
-    setRefreshing(false);
   }, []);
 
   const handleAddMember = () => {
     if (!familyData) {
       // If no family exists yet, create one first
-      router.push('/add-family');
+      Alert.alert(
+        "No Family",
+        "You need to create a family first",
+        [{ text: "OK", onPress: () => router.push('/family') }]
+      );
     } else {
       // Otherwise go to add member screen
       router.push('/add-family-member');
@@ -70,7 +97,11 @@ const FamilyMembers = () => {
         )}
       </View>
       <View className="bg-white p-4 rounded-lg items-center justify-center text shadow-md m-4 mt-10 h-[65vh]">
-        {familyMembers.length === 0 ? (
+        {loading && !refreshing ? (
+          <View className="items-center justify-center h-full">
+            <Text className="text-gray-500 text-lg">Loading family members...</Text>
+          </View>
+        ) : familyMembers.length === 0 ? (
           <View className="items-center justify-center h-full">
             <Text className="text-gray-500 text-lg">No family members added yet.</Text>
           </View>
@@ -78,24 +109,27 @@ const FamilyMembers = () => {
           <FlatList
             className="w-full"
             data={familyMembers}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => `${item.id || item.username || index}`}
             renderItem={({ item }) => (
-              <View className="items-center justify py-3 border-b border-gray-200 last:border-b-0">
-                <TouchableOpacity 
-                  className="flex-row items-center justify-between w-full p-4 border border-gray-300 rounded-lg"
-                  onPress={() => router.push({
-                    pathname: '/edit-family',
-                    params: { username: item.username }
-                  })}
-                >
-                  <View className="flex-1">
-                    <Text className="text-lg font-medium">{item.username}</Text>
-                    <Text className="text-xs text-gray-500">{item.email}</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity 
+                className="flex-row items-center justify-between w-full p-4 mb-4 border border-gray-300 rounded-lg"
+                onPress={() => router.push({
+                  pathname: '/edit-family',
+                  params: { username: item.username }
+                })}
+              >
+                <View className="flex-1">
+                  <Text className="text-lg font-medium">{item.username}</Text>
+                  <Text className="text-xs text-gray-500">{item.email}</Text>
+                </View>
+              </TouchableOpacity>
             )}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            contentContainerStyle={{ 
+              paddingVertical: 10,
+              flexGrow: 1,
+              ...(familyMembers.length === 0 && { justifyContent: 'center' })
+            }}
           />
         )}
       </View>
