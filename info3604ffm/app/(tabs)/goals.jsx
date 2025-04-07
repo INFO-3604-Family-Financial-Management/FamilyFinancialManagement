@@ -1,6 +1,7 @@
 import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { router } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import CustomButton from '../../components/CustomButton'
 import { goalService } from '../../services/api'
 
@@ -26,9 +27,21 @@ const Goals = () => {
     }
   };
 
+  // Initial fetch on component mount
   useEffect(() => {
     fetchGoals();
   }, []);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Goals screen in focus - refreshing data');
+      fetchGoals();
+      return () => {
+        // Cleanup function (optional)
+      };
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

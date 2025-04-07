@@ -319,6 +319,22 @@ const TabsLayout = () => {
             )
           }}
         />
+        <Tabs.Screen 
+          name="add-goal"
+          options={{
+            title: 'Add Goal',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Add Goal"
+                focused={focused}
+              />
+            )
+          }}
+        />
       </Tabs>
     </>
   )

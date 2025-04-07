@@ -425,33 +425,21 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
             return personal_goals | family_goals
             
         return personal_goals
-
-    def update(self, request, *args, **kwargs):
-        try:
-            with transaction.atomic():
-                # Lock the goal row for update
-                goal = Goal.objects.select_for_update().get(pk=kwargs['pk'], user=request.user)
-                
-                # Update goal logic
-                amount_saved = request.data.get('amount_saved', None)
-                if amount_saved is not None:
-                    goal.amount_saved += float(amount_saved)
-                    if goal.amount_saved > goal.target_amount:
-                        return Response(
-                            {"error": "Amount saved exceeds the target amount."},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                
-                # Save the updated goal
-                goal.save()
-                serializer = self.get_serializer(goal)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-        except Goal.DoesNotExist:
-            return Response({"error": "Goal not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            logger.error(f"Error updating goal: {str(e)}")
-            return Response({"error": "An error occurred while updating the goal."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        amount_saved = self.request.data.get('amount_saved')
+        
+        if amount_saved is not None:
+            current_saved = instance.amount_saved if hasattr(instance, 'amount_saved') else 0
+            new_saved = current_saved + float(amount_saved)
             
+            # Check if it exceeds target
+            if hasattr(instance, 'target_amount') and new_saved > instance.target_amount:
+                raise serializers.ValidationError("Amount saved exceeds the target amount.")
+            
+            serializer.save(amount_saved=new_saved)
+        else:
+            serializer.save()           
 class UserProfileListCreateView(generics.ListCreateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -658,7 +646,6 @@ class FamilyFinancesView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
 class FamilyIncomeView(APIView):
     """
     View to get the total income for a family (sum of all members' monthly incomes)
@@ -702,7 +689,6 @@ class FamilyIncomeView(APIView):
                 {"error": str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
 class FamilyExpensesView(APIView):
     """
