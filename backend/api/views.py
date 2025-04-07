@@ -548,6 +548,24 @@ class StreakViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def update_streak(self, request, pk=None):
+        """
+        Custom endpoint to update a user's streak according to business logic
+        """
+        streak = self.get_object()
+        
+        try:
+            # Use the update_streak method from the model
+            streak.update_streak()
+            serializer = self.get_serializer(streak)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to update streak: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class CurrentUserFamilyView(generics.RetrieveAPIView):
     serializer_class = FamilySerializer

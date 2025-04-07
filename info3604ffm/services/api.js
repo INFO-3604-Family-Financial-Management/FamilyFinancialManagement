@@ -912,13 +912,38 @@ export const streakService = {
       const response = await fetchWithAuth('/api/streaks/');
       
       if (!response.ok) {
+        if (response.status === 404) {
+          // Create a new streak if it doesn't exist
+          return this.createStreak();
+        }
         throw new Error('Failed to fetch streak');
       }
       
       const streaks = await response.json();
-      return streaks.length > 0 ? streaks[0] : null;
+      return streaks.length > 0 ? streaks[0] : await this.createStreak();
     } catch (error) {
       console.error('Get streak error:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new streak
+  async createStreak() {
+    try {
+      const response = await fetchWithAuth('/api/streaks/', {
+        method: 'POST',
+        body: JSON.stringify({
+          count: 1
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create streak');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Create streak error:', error);
       throw error;
     }
   },
@@ -938,6 +963,33 @@ export const streakService = {
       return await response.json();
     } catch (error) {
       console.error('Update streak error:', error);
+      throw error;
+    }
+  },
+  
+  // Check and update streak logic (calls backend endpoint to handle streak logic)
+  async checkAndUpdateStreak() {
+    try {
+      // First get the current streak
+      const streak = await this.getStreak();
+      
+      if (!streak) {
+        // Create a new streak if none exists
+        return await this.createStreak();
+      }
+      
+      // Use the specific update_streak backend method
+      const response = await fetchWithAuth(`/api/streaks/${streak.id}/update_streak/`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update streak');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Check and update streak error:', error);
       throw error;
     }
   }

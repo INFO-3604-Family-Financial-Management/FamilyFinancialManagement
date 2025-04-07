@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, SafeAreaView, RefreshControl } 
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import CustomButton from '../../components/CustomButton';
+import StreakIndicator from '../../components/StreakIndicator';
 import { expenseService, profileService } from '../../services/api';
 
 const HomeScreen = () => {
@@ -69,6 +70,7 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView className="bg-gray-500 h-full">
+      <StreakIndicator />
       <View className="mt-10 items-center">
         <Text className="text-black text-2xl">Home</Text>
       </View>

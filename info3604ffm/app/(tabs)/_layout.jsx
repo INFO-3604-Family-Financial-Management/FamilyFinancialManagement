@@ -335,6 +335,22 @@ const TabsLayout = () => {
             )
           }}
         />
+        <Tabs.Screen 
+          name="streak-stats"
+          options={{
+            title: 'Streak Stats',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },  // Hide from tab bar
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Streak Stats"
+                focused={focused}
+              />
+            )
+          }}
+        />
       </Tabs>
     </>
   )
