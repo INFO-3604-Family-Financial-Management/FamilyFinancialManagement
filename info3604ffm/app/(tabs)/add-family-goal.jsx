@@ -19,7 +19,8 @@ const AddFamilyGoal = () => {
     useEffect(() => {
         const fetchFamilyData = async () => {
             try {
-                const family = await familyService.getFamily();
+                // Use getCurrentUserFamily instead of getFamily
+                const family = await familyService.getCurrentUserFamily();
                 if (family && family.id) {
                     setFamilyId(family.id);
                 } else {
@@ -104,18 +105,19 @@ const AddFamilyGoal = () => {
                     value={form.amount}
                     handleChangeText={(e) => setForm({...form, amount: e})}
                     otherStyles='mt-7'
+                    keyboardType="numeric"
                 />
                 <View className='mt-10'>
                     <Text className='text-base text-gray-100 text-medium'>Type</Text>
                     <View className='border-2 border-white w-full p-4 bg-white rounded-2xl focus:border-black'>
                         <TouchableOpacity onPress={() => setGoalType('saving')} className="mb-2 flex-row items-center">
                             <Checkbox value={goalType === 'saving'} onValueChange={() => setGoalType('saving')} />
-                            <Text>Saving</Text>
+                            <Text className="ml-2">Saving</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => setGoalType('spending')} className="mb-2 flex-row items-center">
                             <Checkbox value={goalType === 'spending'} onValueChange={() => setGoalType('spending')} />
-                            <Text>Spending</Text>
+                            <Text className="ml-2">Spending</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -123,6 +125,7 @@ const AddFamilyGoal = () => {
                     title="Save"
                     handlePress={submit}
                     containerStyles="mx-8 mt-10 w-half"
+                    isLoading={isLoading}
                 />
                 <CustomButton
                     title="Cancel"

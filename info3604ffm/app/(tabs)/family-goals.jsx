@@ -13,8 +13,8 @@ const FamilyGoals = () => {
 
   const fetchFamilyGoals = async () => {
     try {
-      // First get the family ID
-      const family = await familyService.getFamily();
+      // First get the family ID - using getCurrentUserFamily instead of getFamily
+      const family = await familyService.getCurrentUserFamily();
       if (!family || !family.id) {
         setIsLoading(false);
         return;
@@ -22,9 +22,15 @@ const FamilyGoals = () => {
       
       setFamilyId(family.id);
       
-      // Then fetch goals for this family
-      const response = await goalService.getFamilyGoals(family.id);
-      setGoals(response || []);
+      // Then fetch all goals
+      const allGoals = await goalService.getGoals();
+      
+      // Filter out family goals for this family
+      const familyGoals = allGoals.filter(goal => 
+        goal.family && goal.family.toString() === family.id.toString() && !goal.is_personal
+      );
+      
+      setGoals(familyGoals || []);
     } catch (error) {
       console.error('Error fetching family goals:', error);
       Alert.alert("Error", "Failed to load family goals");
@@ -53,7 +59,7 @@ const FamilyGoals = () => {
 
   const renderGoalItem = ({ item }) => {
     // Calculate progress percentage
-    const progress = item.currentAmount ? (item.currentAmount / item.amount * 100).toFixed(0) : 0;
+    const progress = parseFloat(item.progress_percentage) || 0;
     
     return (
       <TouchableOpacity 
@@ -63,12 +69,12 @@ const FamilyGoals = () => {
         <View className="flex-row justify-between items-center">
           <Text className="text-lg font-medium">{item.name}</Text>
           <Text className="text-sm text-blue-600 font-medium">
-            {item.goalType === 'saving' ? 'Saving' : 'Spending'}
+            {item.goal_type === 'saving' ? 'Saving' : 'Spending'}
           </Text>
         </View>
         
         <View className="mt-2 mb-1">
-          <Text className="text-gray-600">${item.currentAmount || 0} of ${item.amount}</Text>
+          <Text className="text-gray-600">${item.progress || 0} of ${item.amount}</Text>
         </View>
         
         {/* Progress bar */}
@@ -79,7 +85,7 @@ const FamilyGoals = () => {
           />
         </View>
         
-        <Text className="text-right text-sm text-gray-600 mt-1">{progress}%</Text>
+        <Text className="text-right text-sm text-gray-600 mt-1">{progress.toFixed(0)}%</Text>
       </TouchableOpacity>
     );
   };
