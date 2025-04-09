@@ -292,15 +292,6 @@ const ExpenseTracking = () => {
                     searchPlaceholder="Search spending goals..."
                   />
                 </View>
-                
-                {/* Description */}
-                <FormField
-                  title="Additional Notes (Optional)"
-                  value={form.description}
-                  placeholder="Add more details"
-                  handleChangeText={(text) => setForm({ ...form, description: text })}
-                  otherStyles="mb-2"
-                />
               </>
             )}
             
