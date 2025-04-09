@@ -144,7 +144,7 @@ const Expenses = () => {
           <View className="flex-row items-center mt-1">
             <Ionicons name="wallet-outline" size={14} color="#4B5563" />
             <Text className="text-gray-500 ml-1">
-              Budget: {item.budget.name || 'Unknown'}
+              Budgeted {item.budget.name || ''}
             </Text>
           </View>
         )}
@@ -154,7 +154,7 @@ const Expenses = () => {
           <View className="flex-row items-center mt-1">
             <Ionicons name="flag-outline" size={14} color="#4B5563" />
             <Text className="text-gray-500 ml-1">
-              Goal: {item.goal.name || 'Unknown'}
+              Goal {item.goal.name || ''}
             </Text>
           </View>
         )}
