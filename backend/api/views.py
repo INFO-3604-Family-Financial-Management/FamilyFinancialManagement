@@ -108,15 +108,45 @@ class FamilyListCreateView(generics.ListCreateAPIView):
         return Family.objects.filter(members=self.request.user)
 
     def perform_create(self, serializer):
-        family = serializer.save()
+        try:
+            # Use transaction to ensure atomicity
+            with transaction.atomic():
+                # Save the family
+                family = serializer.save()
+                
+                if not family:
+                    raise ValueError("Failed to create family")
+                
+                # Add the creator to the family through their UserProfile
+                try:
+                    profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+                    
+                    # Check if user is already part of a family
+                    if profile.family and not created:
+                        logger.warning(f"User {self.request.user.username} is already part of family {profile.family.name}")
+                        # Option: Raise exception or continue
+                        # raise ValueError(f"You are already part of family: {profile.family.name}")
+                    
+                    # Update profile with new family
+                    profile.family = family
+                    profile.save()
+                    
+                    # Also add to direct members for backward compatibility
+                    family.members.add(self.request.user)
+                    
+                    logger.info(f"User {self.request.user.username} successfully added to new family {family.name}")
+                    
+                except UserProfile.DoesNotExist:
+                    logger.error(f"Error retrieving profile for user {self.request.user.username}")
+                    raise ValueError("Unable to create user profile")
+                except Exception as e:
+                    logger.error(f"Error adding user to family: {str(e)}")
+                    raise ValueError(f"Error adding you to family: {str(e)}")
         
-        # Add the creator to the family through their UserProfile
-        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
-        profile.family = family
-        profile.save()
-        
-        # Also add to direct members for backward compatibility
-        family.members.add(self.request.user)
+        except Exception as e:
+            logger.error(f"Family creation failed: {str(e)}")
+            # Re-raise the exception to be handled by the framework
+            raise serializer.ValidationError(f"Family creation failed: {str(e)}")
 
 class FamilyDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = FamilySerializer

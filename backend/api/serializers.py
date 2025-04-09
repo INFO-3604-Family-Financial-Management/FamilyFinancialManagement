@@ -31,6 +31,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class FamilySerializer(serializers.ModelSerializer):
     members_count = serializers.SerializerMethodField()
+    members = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
     
     class Meta:
         model = Family

@@ -351,6 +351,22 @@ const TabsLayout = () => {
             )
           }}
         />
+        <Tabs.Screen 
+          name="create-family"
+          options={{
+            title: 'Create Family',
+            headerShown: false,
+            tabBarItemStyle: { display: 'none' },  // Hide from tab bar
+            tabBarIcon: ({color, focused}) => (
+              <TabIcon
+                icon={icons.profile}
+                color={color}
+                name="Create Family"
+                focused={focused}
+              />
+            )
+          }}
+        />
       </Tabs>
     </>
   )

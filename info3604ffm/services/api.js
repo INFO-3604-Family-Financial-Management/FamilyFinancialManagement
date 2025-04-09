@@ -525,13 +525,57 @@ export const familyService = {
   // Create a new family
   async createFamily(familyData) {
     try {
+      // Handle user ID for members
+      let members = familyData.members || [];
+      
+      // If the user provided a list of member IDs, use it
+      // Otherwise try to get the current user's ID from UserProfile
+      if (members.length === 0) {
+        try {
+          // Try to get current user ID from profile
+          const profile = await profileService.getUserProfile();
+          if (profile && profile.user) {
+            members = [profile.user];
+          }
+        } catch (e) {
+          console.warn('Could not get user profile, sending empty members list');
+        }
+      }
+      
+      const dataToSend = {
+        ...familyData,
+        members
+      };
+      
+      console.log('Creating family with data:', dataToSend);
+      
       const response = await fetchWithAuth('/api/families/', {
         method: 'POST',
-        body: JSON.stringify(familyData)
+        body: JSON.stringify(dataToSend)
       });
       
+      // Check for error responses
       if (!response.ok) {
-        throw new Error('Failed to create family');
+        // Try to extract detailed error message
+        let errorMessage = 'Failed to create family';
+        try {
+          const errorData = await response.json();
+          if (errorData.members) {
+            errorMessage = `Members field error: ${Array.isArray(errorData.members) ? errorData.members.join(', ') : errorData.members}`;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (typeof errorData === 'object') {
+            // Convert any other error object to string
+            errorMessage = JSON.stringify(errorData);
+          }
+        } catch (e) {
+          // If we can't parse error JSON, use response status
+          errorMessage = `Failed to create family (${response.status})`;
+        }
+        
+        throw new Error(errorMessage);
       }
       
       return await response.json();
