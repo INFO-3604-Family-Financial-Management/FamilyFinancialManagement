@@ -138,8 +138,25 @@ const Expenses = () => {
       <View className="flex-1">
         <Text className="text-lg font-semibold">{item.description}</Text>
         <Text className="text-gray-500">{formatDate(item.date)}</Text>
+        
+        {/* Show budget association if available */}
         {item.budget && (
-          <Text className="text-gray-500">Budget: {item.budget.name || 'Unknown'}</Text>
+          <View className="flex-row items-center mt-1">
+            <Ionicons name="wallet-outline" size={14} color="#4B5563" />
+            <Text className="text-gray-500 ml-1">
+              Budget: {item.budget.name || 'Unknown'}
+            </Text>
+          </View>
+        )}
+        
+        {/* Show goal association if available */}
+        {item.goal && (
+          <View className="flex-row items-center mt-1">
+            <Ionicons name="flag-outline" size={14} color="#4B5563" />
+            <Text className="text-gray-500 ml-1">
+              Goal: {item.goal.name || 'Unknown'}
+            </Text>
+          </View>
         )}
       </View>
       <View className="flex-row items-center">

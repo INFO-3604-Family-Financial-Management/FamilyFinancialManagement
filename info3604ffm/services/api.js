@@ -372,22 +372,47 @@ export const profileService = {
 
 // Expense service
 export const expenseService = {
-  // Add a new expense
+  // Add a new expense with optional budget and goal associations
   async addExpense(expenseData) {
     try {
+      console.log('Adding expense with data:', {
+        ...expenseData,
+        amount: expenseData.amount ? parseFloat(expenseData.amount) : null
+      });
+
+      // Ensure we're sending proper data format to the API
+      const payload = {
+        description: expenseData.description,
+        amount: parseFloat(expenseData.amount),
+        // Only include budget and goal if they are non-null and valid
+        ...(expenseData.budget && { budget: expenseData.budget }),
+        ...(expenseData.goal && { goal: expenseData.goal })
+      };
+
       const response = await fetchWithAuth('/api/expenses/', {
         method: 'POST',
-        body: JSON.stringify({
-          description: expenseData.description,
-          amount: parseFloat(expenseData.amount),
-          budget: expenseData.budget || null,
-          goal: expenseData.goal || null
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to add expense');
+        // Try to get detailed error information
+        let errorMessage = 'Failed to add expense';
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (typeof errorData === 'object') {
+            // Convert any other error object to string
+            const errorFields = Object.keys(errorData)
+              .map(key => `${key}: ${errorData[key]}`)
+              .join(', ');
+            errorMessage = errorFields || errorMessage;
+          }
+        } catch (e) {
+          // If JSON parsing fails, use status text
+          errorMessage = `Failed to add expense (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       return await response.json();
@@ -434,7 +459,11 @@ export const expenseService = {
     try {
       const response = await fetchWithAuth(`/api/expenses/${id}/`, {
         method: 'PATCH',
-        body: JSON.stringify(expenseData)
+        body: JSON.stringify({
+          ...expenseData,
+          // Ensure amount is properly formatted as a float if present
+          ...(expenseData.amount && { amount: parseFloat(expenseData.amount) })
+        })
       });
       
       if (!response.ok) {
@@ -463,27 +492,6 @@ export const expenseService = {
     } catch (error) {
       console.error('Delete expense error:', error);
       throw error;
-    }
-  },
-  
-  // Get monthly budget status
-  async getMonthlyBudgetStatus() {
-    try {
-      const response = await fetchWithAuth('/api/monthly-budget-status/');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch monthly budget status');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Get monthly budget status error:', error);
-      return {
-        monthly_expenses: 0,
-        monthly_budget: 0,
-        monthly_income: 0,
-        remaining_budget: 0
-      };
     }
   }
 };
@@ -908,6 +916,7 @@ export const goalService = {
 };
 
 // Contribution service
+// Enhanced contribution service for savings goals
 export const contributionService = {
   // Get all contributions
   async getContributions() {
@@ -925,9 +934,22 @@ export const contributionService = {
     }
   },
   
-  // Create a new contribution
+  // Create a new contribution for a savings goal
   async createContribution(contributionData) {
     try {
+      if (!contributionData.goal) {
+        throw new Error('A savings goal is required for contributions');
+      }
+      
+      if (!contributionData.amount || isNaN(parseFloat(contributionData.amount)) || parseFloat(contributionData.amount) <= 0) {
+        throw new Error('A valid positive amount is required');
+      }
+      
+      console.log('Creating contribution with data:', {
+        goal: contributionData.goal,
+        amount: parseFloat(contributionData.amount)
+      });
+      
       const response = await fetchWithAuth('/api/contributions/', {
         method: 'POST',
         body: JSON.stringify({
@@ -937,7 +959,24 @@ export const contributionService = {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create contribution');
+        // Try to get detailed error information
+        let errorMessage = 'Failed to create contribution';
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (typeof errorData === 'object') {
+            // Convert any other error object to string
+            const errorFields = Object.keys(errorData)
+              .map(key => `${key}: ${errorData[key]}`)
+              .join(', ');
+            errorMessage = errorFields || errorMessage;
+          }
+        } catch (e) {
+          // If JSON parsing fails, use status text
+          errorMessage = `Failed to create contribution (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
       
       return await response.json();
@@ -945,9 +984,32 @@ export const contributionService = {
       console.error('Create contribution error:', error);
       throw error;
     }
+  },
+  
+  // Get contributions for a specific goal
+  async getContributionsForGoal(goalId) {
+    try {
+      const allContributions = await this.getContributions();
+      return allContributions.filter(contribution => contribution.goal.toString() === goalId.toString());
+    } catch (error) {
+      console.error(`Error fetching contributions for goal ${goalId}:`, error);
+      throw error;
+    }
+  },
+  
+  // Get total contribution amount for a goal
+  async getTotalContributionForGoal(goalId) {
+    try {
+      const goalContributions = await this.getContributionsForGoal(goalId);
+      return goalContributions.reduce((total, contribution) => {
+        return total + parseFloat(contribution.amount);
+      }, 0);
+    } catch (error) {
+      console.error(`Error calculating total contribution for goal ${goalId}:`, error);
+      return 0; // Return 0 as default in case of error
+    }
   }
 };
-
 // Streak service
 export const streakService = {
   // Get user streak
