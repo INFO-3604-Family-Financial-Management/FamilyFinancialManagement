@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Alert } from "react-native";
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
@@ -10,7 +10,19 @@ const CreateBudget = () => {
     const [form, setForm] = useState({
         category: '',
         amount: 0
-    })
+    });
+    const [currentMonth, setCurrentMonth] = useState('');
+
+    useEffect(() => {
+      // Get current month name
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const now = new Date();
+      setCurrentMonth(monthNames[now.getMonth()]);
+    }, []);
+
     const submit = async () => {
       try {
         if (!form.category.trim()) {
@@ -48,7 +60,7 @@ const CreateBudget = () => {
       </View>
       <View className="bg-gray-600 p-4 rounded-lg m-4 mt-10 h-[65vh]">
         <Text className="text-2xl text-left font-bold text-gray-900 text-center">
-          February
+          {currentMonth}
         </Text>
         <View className=" justify-center items-center p-4">
             <FormField
