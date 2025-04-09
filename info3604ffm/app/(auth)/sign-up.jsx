@@ -57,7 +57,7 @@ const SignUp = () => {
       Alert.alert(
         "Registration Successful",
         "Your account was created successfully. Please sign in.",
-        [{ text: "OK", onPress: () => router.push("/home") }]
+        [{ text: "OK", onPress: () => router.push("/sign-in") }]
       )
     } catch (error) {
       Alert.alert("Registration Failed", error.message || "Something went wrong. Please try again.")
