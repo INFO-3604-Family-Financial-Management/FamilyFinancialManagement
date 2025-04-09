@@ -1,8 +1,9 @@
-import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator, ScrollView, StatusBar } from 'react-native'
 import { router } from 'expo-router'
 import React, { useState, useEffect } from 'react'
 import { familyService } from '../../services/api'
 import CustomButton from '../../components/CustomButton'
+import { Ionicons } from '@expo/vector-icons'
 
 const Family = () => {
   const [familyName, setFamilyName] = useState("");
@@ -32,12 +33,41 @@ const Family = () => {
     fetchFamilyData();
   }, []);
 
+  // Family features with icons
+  const familyFeatures = [
+    {
+      title: 'Family Members',
+      icon: 'people-outline',
+      route: 'family-members',
+      description: 'View and manage family members'
+    },
+    {
+      title: 'Shared Budget',
+      icon: 'wallet-outline',
+      route: 'family-budget',
+      description: 'Track shared expenses and budgets'
+    },
+    {
+      title: 'Shared Savings',
+      icon: 'trending-up-outline',
+      route: 'family-savings',
+      description: 'Monitor family savings progress'
+    },
+    {
+      title: 'Shared Goals',
+      icon: 'flag-outline',
+      route: 'family-goals',
+      description: 'Set and achieve financial goals together'
+    }
+  ];
+
   if (loading) {
     return (
       <SafeAreaView className='bg-gray-500 h-full'>
-        <View className='mt-10 items-center'>
-          <Text className='text-black font-bold text-3xl'>Family</Text>
-          <ActivityIndicator size="large" color="#FFF" className="mt-20" />
+        <StatusBar barStyle="dark-content" />
+        <View className='flex-1 justify-center items-center'>
+          <ActivityIndicator size="large" color="#FFF" />
+          <Text className='text-white mt-4 font-medium'>Loading family data...</Text>
         </View>
       </SafeAreaView>
     );
@@ -46,18 +76,27 @@ const Family = () => {
   if (!hasFamily) {
     return (
       <SafeAreaView className='bg-gray-500 h-full'>
-        <View className='mt-10 items-center'>
-          <Text className='text-black font-bold text-3xl'>Family</Text>
+        <StatusBar barStyle="dark-content" />
+        <View className='pt-12 px-6'>
+          <Text className='text-black font-bold text-3xl text-center'>Family</Text>
         </View>
-        <View className='p-4 rounded-lg m-4 mt-20 h-[55vh] items-center justify-center'>
-          <Text className='text-white text-xl text-center mb-6'>
-            You don't have a family yet. Create one to start managing family finances together.
-          </Text>
-          <CustomButton
-            title="Create Family"
-            handlePress={() => router.push('create-family')}
-            containerStyles="w-64 mt-4"
-          />
+        
+        <View className='flex-1 justify-center items-center px-6'>
+          <View className='bg-white rounded-2xl p-8 shadow-md w-full items-center'>
+            <Ionicons name="people" size={80} color="#D1D5DB" />
+            <Text className='text-black text-xl font-semibold text-center mt-4 mb-2'>
+              No Family Yet
+            </Text>
+            <Text className='text-gray-500 text-center mb-8'>
+              Create a family to start managing finances together with your loved ones.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push('create-family')}
+              className='bg-indigo-200 px-6 py-3 rounded-xl w-full'
+            >
+              <Text className='text-center text-black font-bold text-lg'>Create Family</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -65,33 +104,57 @@ const Family = () => {
 
   return (
     <SafeAreaView className='bg-gray-500 h-full'>
-      <View className='mt-10 items-center'>
-        <Text className='text-black font-bold text-3xl'>{familyName} Family</Text>
-      </View>
-       <View className='p-4 rounded-lg m-1 mt-10 h-[65vh]'>
-            <View className="flex-1 justify-center items-center p-4 w-full">
-                <TouchableOpacity className="flex-row items-center justify-between w-full p-4 mb-6 border border-gray-300 rounded-lg"
-                    onPress={() => router.push('family-members')}
-                >
-                    <Text className="text-lg text-center font-medium w-full">Family Members</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="flex-row items-center justify-between w-full p-4 mb-6 border border-gray-300 rounded-lg"
-                  onPress={() => router.push('family-budget')}
-                >
-                    <Text className="text-lg text-center font-medium w-full">Shared Budget</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="flex-row items-center justify-between w-full p-4 mb-6 border border-gray-300 rounded-lg"
-                    onPress={() => router.push('family-savings')}
-                >
-                    <Text className="text-lg text-center font-medium w-full">Shared Savings</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="flex-row items-center justify-between w-full p-4 border border-gray-300 rounded-lg"
-                    onPress={() => router.push('family-goals')}
-                >
-                    <Text className="text-lg text-center font-medium w-full">Shared Goals</Text>
-                </TouchableOpacity>
-            </View>   
+      <StatusBar barStyle="dark-content" />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header with family name */}
+        <View className='bg-indigo-200 pt-12 pb-6 rounded-b-3xl shadow-md'>
+          <View className='px-6'>
+            <Text className='text-black font-bold text-2xl text-center'>{familyName} Family</Text>
+            <View className='flex-row justify-center mt-4'>
+              <View className='bg-white rounded-full p-3 shadow-sm'>
+                <Ionicons name="people" size={36} color="#4B5563" />
+              </View>
+            </View>
+          </View>
         </View>
+        
+        {/* Family features cards */}
+        <View className='px-5 -mt-4'>
+          <View className='bg-white rounded-3xl p-5 shadow-md'>
+            {familyFeatures.map((feature, index) => (
+              <TouchableOpacity 
+                key={index}
+                className='flex-row items-center bg-gray-50 rounded-xl p-4 mb-3 border border-gray-100'
+                onPress={() => router.push(feature.route)}
+              >
+                <View className='bg-indigo-100 rounded-full p-3 mr-4'>
+                  <Ionicons name={feature.icon} size={24} color="#4B5563" />
+                </View>
+                <View className='flex-1'>
+                  <Text className='text-gray-800 text-lg font-semibold'>{feature.title}</Text>
+                  <Text className='text-gray-500 text-sm'>{feature.description}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {/* Family insights card */}
+          <View className='bg-white rounded-xl p-5 mt-4 shadow-sm'>
+            <Text className='text-gray-800 font-semibold mb-2 text-lg'>Family Finance Tips</Text>
+            <Text className='text-gray-600 text-sm mb-3'>
+              Establish clear financial goals and communicate openly about money matters with your family members.
+            </Text>
+            <TouchableOpacity 
+              className='flex-row items-center'
+              onPress={() => router.push('family-members')}
+            >
+              <Text className='text-indigo-500 font-medium'>Manage family members</Text>
+              <Ionicons name="arrow-forward" size={16} color="#6366F1" style={{marginLeft: 4}} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   )
 }

@@ -71,8 +71,8 @@ const HomeScreen = () => {
   return (
     <SafeAreaView className="bg-gray-500 h-full">
       <StreakIndicator />
-      <View className="mt-10 items-center">
-        <Text className="text-black text-2xl">Home</Text>
+      <View className="mt-16 items-center">
+        <Text className="text-black text-2xl font-bold">Home</Text>
       </View>
       
       {/* Income Display */}
