@@ -470,6 +470,7 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save(amount_saved=new_saved)
         else:
             serializer.save()           
+
 class UserProfileListCreateView(generics.ListCreateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -533,10 +534,8 @@ class ContributionListCreateView(generics.ListCreateAPIView):
         return Contribution.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        contribution = serializer.save(user=self.request.user)
-        self.update_budget_and_income(contribution)
-
-    def update_budget_and_income(self, contribution):
+        # Simply save the contribution without calling update_budget_and_income
+        serializer.save(user=self.request.user)
         user = contribution.user
         amount = contribution.amount
 
