@@ -169,7 +169,7 @@ export const authService = {
   }
 };
 
-// Enhanced fetchWithAuth function with better error handling
+// fetchWithAuth function to make sure that all requests are authenticated
 export const fetchWithAuth = async (url, options = {}) => {
   try {
     let token = await authService.getAccessToken();
@@ -379,42 +379,37 @@ export const expenseService = {
         ...expenseData,
         amount: expenseData.amount ? parseFloat(expenseData.amount) : null
       });
-
-      // Ensure we're sending proper data format to the API
+  
       const payload = {
         description: expenseData.description,
         amount: parseFloat(expenseData.amount),
-        // Only include budget and goal if they are non-null and valid
         ...(expenseData.budget && { budget: expenseData.budget }),
         ...(expenseData.goal && { goal: expenseData.goal })
       };
-
+  
       const response = await fetchWithAuth('/api/expenses/', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-
+  
       if (!response.ok) {
-        // Try to get detailed error information
         let errorMessage = 'Failed to add expense';
         try {
           const errorData = await response.json();
           if (errorData.detail) {
             errorMessage = errorData.detail;
           } else if (typeof errorData === 'object') {
-            // Convert any other error object to string
             const errorFields = Object.keys(errorData)
               .map(key => `${key}: ${errorData[key]}`)
               .join(', ');
             errorMessage = errorFields || errorMessage;
           }
         } catch (e) {
-          // If JSON parsing fails, use status text
           errorMessage = `Failed to add expense (${response.status}: ${response.statusText})`;
         }
         throw new Error(errorMessage);
       }
-
+  
       return await response.json();
     } catch (error) {
       console.error('Add expense error:', error);
@@ -721,23 +716,44 @@ export const familyFinanceService = {
 
 // Budget service
 export const budgetService = {
-  // Get all budgets
+  // Get personal budgets
   async getBudgets() {
     try {
       const response = await fetchWithAuth('/api/budgets/');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch budgets');
+        throw new Error('Failed to fetch personal budgets');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Get budgets error:', error);
+      console.error('Get personal budgets error:', error);
       throw error;
     }
   },
   
-  // Create a new budget
+  // Get family budgets
+  async getFamilyBudgets() {
+    try {
+      console.log('Fetching shared family budgets...');
+      const response = await fetchWithAuth('/api/family/budgets/');
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // User doesn't have a family
+          return [];
+        }
+        throw new Error('Failed to fetch family budgets');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get family budgets error:', error);
+      throw error;
+    }
+  },
+  
+  // Create a personal budget
   async createBudget(budgetData) {
     try {
       const response = await fetchWithAuth('/api/budgets/', {
@@ -750,49 +766,47 @@ export const budgetService = {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create budget');
+        throw new Error('Failed to create personal budget');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Create budget error:', error);
+      console.error('Create personal budget error:', error);
       throw error;
     }
   },
   
-  // Update a budget
-  async updateBudget(id, budgetData) {
+  // Create a family budget
+  async createFamilyBudget(budgetData) {
     try {
-      const response = await fetchWithAuth(`/api/budgets/${id}/`, {
-        method: 'PATCH',
-        body: JSON.stringify(budgetData)
+      console.log('Creating family budget with data:', budgetData);
+      
+      const response = await fetchWithAuth('/api/family/budgets/', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: budgetData.category,
+          amount: parseFloat(budgetData.amount),
+          category: budgetData.category
+          // is_family and family will be set on the server
+        })
       });
       
       if (!response.ok) {
-        throw new Error('Failed to update budget');
+        // Try to get detailed error info
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If we can't parse JSON, use a simple message
+        }
+        
+        const errorMessage = errorData?.detail || 'Failed to create family budget';
+        throw new Error(errorMessage);
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Update budget error:', error);
-      throw error;
-    }
-  },
-  
-  // Delete a budget
-  async deleteBudget(id) {
-    try {
-      const response = await fetchWithAuth(`/api/budgets/${id}/`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete budget');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Delete budget error:', error);
+      console.error('Create family budget error:', error);
       throw error;
     }
   }

@@ -44,16 +44,39 @@ const ExpenseTracking = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch budgets
-      const budgetsData = await budgetService.getBudgets();
-      const formattedBudgets = budgetsData.map(budget => ({
-        key: budget.id,
-        value: `${budget.category}: ${budget.name} ($${budget.amount})`
-      }));
+      // Fetch both personal and family budgets
+      const personalBudgets = await budgetService.getBudgets();
+      let familyBudgets = [];
+      
+      try {
+        // Try to fetch family budgets (might fail if user has no family)
+        familyBudgets = await budgetService.getFamilyBudgets();
+      } catch (error) {
+        console.log('User might not have a family, skipping family budgets');
+      }
+      
+      // Combine and format budgets, adding a label to distinguish family budgets
+      const formattedBudgets = [
+        ...personalBudgets.map(budget => ({
+          key: budget.id,
+          value: `${budget.category}: ${budget.name} ($${budget.amount})`,
+          isFamily: false
+        })),
+        ...familyBudgets.map(budget => ({
+          key: budget.id,
+          value: `👨‍👩‍👦 Family - ${budget.category}: ${budget.name} ($${budget.amount})`,
+          isFamily: true
+        }))
+      ];
+      
       setBudgets(formattedBudgets);
 
-      // Extract unique categories from budgets
-      const uniqueCategories = [...new Set(budgetsData.map(budget => budget.category))];
+      // Extract unique categories from all budgets
+      const uniqueCategories = [...new Set([
+        ...personalBudgets.map(budget => budget.category),
+        ...familyBudgets.map(budget => budget.category)
+      ])];
+      
       const formattedCategories = uniqueCategories.map(category => ({
         key: category,
         value: category
@@ -67,7 +90,8 @@ const ExpenseTracking = () => {
       const spending = goalsData.filter(goal => goal.goal_type === 'spending');
       const formattedSpendingGoals = spending.map(goal => ({
         key: goal.id,
-        value: `${goal.name} ($${goal.amount})`
+        value: `${goal.is_personal ? '' : '👨‍👩‍👦 Family - '}${goal.name} ($${goal.amount})`,
+        isFamily: !goal.is_personal
       }));
       setSpendingGoals(formattedSpendingGoals);
       
@@ -75,7 +99,8 @@ const ExpenseTracking = () => {
       const saving = goalsData.filter(goal => goal.goal_type === 'saving');
       const formattedSavingGoals = saving.map(goal => ({
         key: goal.id,
-        value: `${goal.name} ($${goal.amount})`
+        value: `${goal.is_personal ? '' : '👨‍👩‍👦 Family - '}${goal.name} ($${goal.amount})`,
+        isFamily: !goal.is_personal
       }));
       setSavingGoals(formattedSavingGoals);
     } catch (error) {
@@ -92,14 +117,14 @@ const ExpenseTracking = () => {
   }, []);
 
   useFocusEffect(
-        useCallback(() => {
-          console.log('Goals screen in focus - refreshing data');
-          fetchData();
-          return () => {
-            // Cleanup function (optional)
-          };
-        }, [])
-      );
+    useCallback(() => {
+      console.log('Expense tracking screen in focus - refreshing data');
+      fetchData();
+      return () => {
+        // Cleanup function (optional)
+      };
+    }, [])
+  );
 
   // Handler for form submission
   const submit = async () => {
@@ -136,13 +161,24 @@ const ExpenseTracking = () => {
           [{ text: 'OK', onPress: () => router.push('/goals') }]
         );
       } else {
-        // Submit as an expense
+        // For expense, we need to check if the selected budget or goal is a family one
+        const selectedBudget = form.budget ? budgets.find(b => b.key === form.budget) : null;
+        const selectedGoal = form.goal ? spendingGoals.find(g => g.key === form.goal) : null;
+        
+        // Create the expense data
         const expenseData = {
           description: form.title,
           amount: amount,
           budget: form.budget,
-          goal: form.goal // This would be a spending goal
+          goal: form.goal
         };
+        
+        // Log what type of expense we're creating
+        if (selectedBudget?.isFamily || selectedGoal?.isFamily) {
+          console.log('Creating expense associated with a family budget or goal');
+        } else {
+          console.log('Creating expense associated with a personal budget or goal');
+        }
 
         await expenseService.addExpense(expenseData);
         
@@ -287,6 +323,12 @@ const ExpenseTracking = () => {
                     inputStyles={{ color: '#333' }}
                     searchPlaceholder="Search budgets..."
                   />
+                  
+                  {budgets.some(budget => budget.isFamily) && (
+                    <Text className="text-xs text-gray-300 mt-1 ml-1">
+                      👨‍👩‍👦 Family budgets are shared with all family members
+                    </Text>
+                  )}
                 </View>
                 
                 {/* Spending Goal Selection */}
@@ -303,6 +345,12 @@ const ExpenseTracking = () => {
                     inputStyles={{ color: '#333' }}
                     searchPlaceholder="Search spending goals..."
                   />
+                  
+                  {spendingGoals.some(goal => goal.isFamily) && (
+                    <Text className="text-xs text-gray-300 mt-1 ml-1">
+                      👨‍👩‍👦 Family goals are shared with all family members
+                    </Text>
+                  )}
                 </View>
               </>
             )}
@@ -322,6 +370,12 @@ const ExpenseTracking = () => {
                   inputStyles={{ color: '#333' }}
                   searchPlaceholder="Search savings goals..."
                 />
+                
+                {savingGoals.some(goal => goal.isFamily) && (
+                  <Text className="text-xs text-gray-300 mt-1 ml-1">
+                    👨‍👩‍👦 Family goals are shared with all family members
+                  </Text>
+                )}
                 
                 {savingGoals.length === 0 && (
                   <View className="mt-2 p-3 bg-yellow-800 rounded-lg">

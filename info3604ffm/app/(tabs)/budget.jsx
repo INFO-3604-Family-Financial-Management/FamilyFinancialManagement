@@ -183,8 +183,11 @@ const Budget = () => {
         </View>
 
         <CustomButton
-          title="Add Category"
-          handlePress={() => router.push("/create-budget")}
+          title="Create Budget"
+          handlePress={() => router.push({
+            pathname: '/create-budget',
+            params: { family : false }
+          })}
           containerStyles="mx-8 mt-2"
         />
     </SafeAreaView>

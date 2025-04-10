@@ -53,20 +53,33 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
         goal_id = self.request.data.get('goal')
         budget_id = self.request.data.get('budget')
 
-        goal = Goal.objects.filter(id=goal_id, user=self.request.user).first() if goal_id else None
-        budget = Budget.objects.filter(id=budget_id, user=self.request.user).first() if budget_id else None
+        goal = None
+        budget = None
+
+        if goal_id:
+            try:
+                goal = Goal.objects.get(id=goal_id, user=self.request.user)
+            except Goal.DoesNotExist:
+                try:
+                    profile = UserProfile.objects.get(user=self.request.user)
+                    if profile.family:
+                        goal = Goal.objects.get(id=goal_id, family=profile.family, is_personal=False)
+                except (UserProfile.DoesNotExist, Goal.DoesNotExist):
+                    pass
+
+
+        if budget_id:
+            try:
+                budget = Budget.objects.get(id=budget_id, user=self.request.user, is_family=False)
+            except Budget.DoesNotExist:
+                try:
+                    profile = UserProfile.objects.get(user=self.request.user)
+                    if profile.family:
+                        budget = Budget.objects.get(id=budget_id, family=profile.family, is_family=True)
+                except (UserProfile.DoesNotExist, Budget.DoesNotExist):
+                    pass
 
         expense = serializer.save(user=self.request.user, goal=goal, budget=budget)
-
-        # Update goal progress
-        if goal:
-            goal.amount -= expense.amount
-            goal.save()
-
-        # Update budget progress
-        if budget:
-            budget.amount -= expense.amount
-            budget.save()
 
 class ExpenseDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ExpenseSerializer
@@ -206,7 +219,6 @@ class FamilyMemberListView(generics.ListAPIView):
             return User.objects.none()
         return family.members.all()
 
-# Enhanced implementation to handle adding/removing family members
 class FamilyMemberManageView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
@@ -317,17 +329,74 @@ class BudgetListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Budget.objects.filter(user=self.request.user)
+        return Budget.objects.filter(user=self.request.user, is_family=False)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user, is_family=False)
+
+class FamilyBudgetListCreateView(generics.ListCreateAPIView):
+    serializer_class = BudgetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Get the user's family
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            if profile.family:
+                # Return family budgets for the user's family
+                return Budget.objects.filter(family=profile.family, is_family=True)
+        except UserProfile.DoesNotExist:
+            pass
+        
+        return Budget.objects.none()
+
+    def perform_create(self, serializer):
+        # Get the user's family
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            if not profile.family:
+                raise serializers.ValidationError("You must be part of a family to create family budgets")
+                
+            # Save with the user's family
+            serializer.save(user=self.request.user, is_family=True, family=profile.family)
+        except UserProfile.DoesNotExist:
+            raise serializers.ValidationError("User profile not found")
+        
+class FamilyBudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = BudgetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            if profile.family:
+                return Budget.objects.filter(family=profile.family, is_family=True)
+        except UserProfile.DoesNotExist:
+            pass
+        
+        return Budget.objects.none()
+    
+    def perform_update(self, serializer):
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            if not profile.family:
+                raise serializers.ValidationError("You must be part of a family to update family budgets")
+                
+            serializer.save(is_family=True, family=profile.family)
+        except UserProfile.DoesNotExist:
+            raise serializers.ValidationError("User profile not found")
 
 class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BudgetSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Budget.objects.filter(user=self.request.user)
+        # Only allow access to personal budgets
+        return Budget.objects.filter(user=self.request.user, is_family=False)
+    
+    def perform_update(self, serializer):
+        # Ensure is_family stays false on update
+        serializer.save(is_family=False)
 
 class MonthlyBudgetStatusView(APIView):
     permission_classes = [IsAuthenticated]
@@ -470,7 +539,6 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save(amount_saved=new_saved)
         else:
             serializer.save()           
-
 class UserProfileListCreateView(generics.ListCreateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -534,8 +602,10 @@ class ContributionListCreateView(generics.ListCreateAPIView):
         return Contribution.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Simply save the contribution without calling update_budget_and_income
         serializer.save(user=self.request.user)
+        # self.update_budget_and_income(contribution)
+
+    def update_budget_and_income(self, contribution):
         user = contribution.user
         amount = contribution.amount
 
