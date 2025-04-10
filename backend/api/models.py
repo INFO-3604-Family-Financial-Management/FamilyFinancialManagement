@@ -175,6 +175,8 @@ class Budget(models.Model):
     )
     category = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_family = models.BooleanField(default=False)
+    family = models.ForeignKey('Family', on_delete=models.CASCADE, null=True, blank=True, related_name='budgets')
     
     class Meta:
         ordering = ['category', 'name']
@@ -184,10 +186,6 @@ class Budget(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.name} - {self.category}"
-
-    @staticmethod
-    def get_monthly_budget(user):
-        return Budget.objects.filter(user=user).aggregate(total=Sum('amount'))['total'] or 0
     
     def get_used_amount(self, month=None, year=None):
         """Calculate how much of the budget has been used"""
@@ -214,7 +212,6 @@ class Budget(models.Model):
         if self.amount > 0:
             return (used / self.amount) * 100
         return 0
-
 class Goal(models.Model):
     GOAL_TYPE_CHOICES = [
         ('saving', 'Saving'),

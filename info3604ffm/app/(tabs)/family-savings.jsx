@@ -1,5 +1,6 @@
 import { View, Text, SafeAreaView, ActivityIndicator } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { familyService, familyFinanceService } from '../../services/api'
 
 const FamilySavings = () => {
@@ -11,81 +12,87 @@ const FamilySavings = () => {
   const [error, setError] = useState(null);
   const [familyName, setFamilyName] = useState('');
 
-  useEffect(() => {
-    // Get current month name
-    const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
-    const now = new Date();
-    setCurrentMonth(monthNames[now.getMonth()]);
-    
-    // Fetch family savings data
-    const fetchFamilySavings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Get the current month name
-        const monthNames = [
-          "January", "February", "March", "April", "May", "June",
-          "July", "August", "September", "October", "November", "December"
-        ];
-        const now = new Date();
-        setCurrentMonth(monthNames[now.getMonth()]);
-        
-        // Get family financial data from our new API endpoint
-        const financialData = await familyFinanceService.getFamilyFinancialData();
-        console.log('Retrieved family financial data:', financialData);
-        
-        // Set family name
-        if (financialData.family && financialData.family.name) {
-          setFamilyName(financialData.family.name);
-        }
-        
-        // Set income, expenses, and savings
-        if (financialData.finances) {
-          setTotalIncome(parseFloat(financialData.finances.total_income) || 0);
-          setTotalSpent(parseFloat(financialData.finances.total_expenses) || 0);
-          setTotalRemaining(parseFloat(financialData.finances.total_savings) || 0);
-        }
-        
-      } catch (err) {
-        console.error('Failed to fetch family savings:', err);
-        
-        // Try fallback approach if the main endpoint fails
-        try {
-          console.log('Trying fallback approach...');
-          
-          // Get family details
-          const family = await familyService.getCurrentUserFamily();
-          if (family && family.name) {
-            setFamilyName(family.name);
-          }
-          
-          // Get income and expenses separately
-          const incomeData = await familyFinanceService.getFamilyIncome();
-          const expenseData = await familyFinanceService.getFamilyExpenses();
-          
-          const income = parseFloat(incomeData.total_income) || 0;
-          const expenses = parseFloat(expenseData.total_expenses) || 0;
-          const savings = income > expenses ? income - expenses : 0;
-          
-          setTotalIncome(income);
-          setTotalSpent(expenses);
-          setTotalRemaining(savings);
-          
-        } catch (fallbackErr) {
-          console.error('Fallback approach also failed:', fallbackErr);
-          setError('Failed to load savings data. Please try again.');
-        }
-      } finally {
-        setLoading(false);
+  const fetchFamilySavings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get the current month name
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const now = new Date();
+      setCurrentMonth(monthNames[now.getMonth()]);
+      
+      // Get family financial data from our new API endpoint
+      console.log('Fetching family financial data...');
+      const financialData = await familyFinanceService.getFamilyFinancialData();
+      console.log('Retrieved family financial data:', financialData);
+      
+      // Set family name
+      if (financialData.family && financialData.family.name) {
+        setFamilyName(financialData.family.name);
       }
-    };
-    
+      
+      // Set income, expenses, and savings
+      if (financialData.finances) {
+        setTotalIncome(parseFloat(financialData.finances.total_income) || 0);
+        setTotalSpent(parseFloat(financialData.finances.total_expenses) || 0);
+        setTotalRemaining(parseFloat(financialData.finances.total_savings) || 0);
+      }
+      
+    } catch (err) {
+      console.error('Failed to fetch family savings:', err);
+      
+      // Try fallback approach if the main endpoint fails
+      try {
+        console.log('Trying fallback approach...');
+        
+        // Get family details
+        const family = await familyService.getCurrentUserFamily();
+        if (family && family.name) {
+          setFamilyName(family.name);
+        }
+        
+        // Get income and expenses separately
+        const incomeData = await familyFinanceService.getFamilyIncome();
+        const expenseData = await familyFinanceService.getFamilyExpenses();
+        
+        const income = parseFloat(incomeData.total_income) || 0;
+        const expenses = parseFloat(expenseData.total_expenses) || 0;
+        const savings = income > expenses ? income - expenses : 0;
+        
+        setTotalIncome(income);
+        setTotalSpent(expenses);
+        setTotalRemaining(savings);
+        
+      } catch (fallbackErr) {
+        console.error('Fallback approach also failed:', fallbackErr);
+        setError('Failed to load savings data. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch when component mounts
+  useEffect(() => {
     fetchFamilySavings();
   }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Family savings screen in focus - refreshing data');
+      fetchFamilySavings();
+      
+      return () => {
+        // Optional cleanup function
+        console.log('Family savings screen lost focus');
+      };
+    }, [])
+  );
   
   // Format currency values
   const formatCurrency = (amount) => {
@@ -184,8 +191,6 @@ const FamilySavings = () => {
                 </Text>
               )}
             </View>
-            
-{/* Financial details now included in the dashboard above */}
           </>
         )}
       </View>

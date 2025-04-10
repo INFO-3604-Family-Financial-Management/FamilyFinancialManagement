@@ -40,7 +40,11 @@ urlpatterns = [
     path('api/budgets/', BudgetListCreateView.as_view(), name='budget-list-create'),
     path('api/budgets/<int:pk>/', BudgetDetailView.as_view(), name='budget-detail'),
     path('api/monthly-budget-status/', MonthlyBudgetStatusView.as_view(), name='monthly-budget-status'),
-    
+
+    # Family Budget endpoints
+    path('api/family/budgets/', FamilyBudgetListCreateView.as_view(), name='family-budget-list-create'),
+    path('api/family/budgets/<int:pk>/', FamilyBudgetDetailView.as_view(), name='family-budget-detail'),
+       
     # Goal endpoints
     path('api/goals/', GoalListCreateView.as_view(), name='goal-list-create'),
     path('api/goals/<int:pk>/', GoalDetailView.as_view(), name='goal-detail'),
