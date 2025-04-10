@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -9,11 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SelectList } from "react-native-dropdown-select-list";
 import FormField from "@/components/FormField";
 import CustomButton from "@/components/CustomButton";
+import { useFocusEffect } from '@react-navigation/native'
 import { expenseService, budgetService, goalService, contributionService } from "@/services/api";
 import { router } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
@@ -39,55 +41,65 @@ const ExpenseTracking = () => {
   const [savingGoals, setSavingGoals] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch budgets
+      const budgetsData = await budgetService.getBudgets();
+      const formattedBudgets = budgetsData.map(budget => ({
+        key: budget.id,
+        value: `${budget.category}: ${budget.name} ($${budget.amount})`
+      }));
+      setBudgets(formattedBudgets);
+
+      // Extract unique categories from budgets
+      const uniqueCategories = [...new Set(budgetsData.map(budget => budget.category))];
+      const formattedCategories = uniqueCategories.map(category => ({
+        key: category,
+        value: category
+      }));
+      setCategories(formattedCategories);
+
+      // Fetch goals and separate by type
+      const goalsData = await goalService.getGoals();
+      
+      // Filter for spending goals
+      const spending = goalsData.filter(goal => goal.goal_type === 'spending');
+      const formattedSpendingGoals = spending.map(goal => ({
+        key: goal.id,
+        value: `${goal.name} ($${goal.amount})`
+      }));
+      setSpendingGoals(formattedSpendingGoals);
+      
+      // Filter for saving goals
+      const saving = goalsData.filter(goal => goal.goal_type === 'saving');
+      const formattedSavingGoals = saving.map(goal => ({
+        key: goal.id,
+        value: `${goal.name} ($${goal.amount})`
+      }));
+      setSavingGoals(formattedSavingGoals);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Alert.alert('Error', 'Failed to load budgets and goals. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch budgets and goals when component mounts
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch budgets
-        const budgetsData = await budgetService.getBudgets();
-        const formattedBudgets = budgetsData.map(budget => ({
-          key: budget.id,
-          value: `${budget.category}: ${budget.name} ($${budget.amount})`
-        }));
-        setBudgets(formattedBudgets);
-
-        // Extract unique categories from budgets
-        const uniqueCategories = [...new Set(budgetsData.map(budget => budget.category))];
-        const formattedCategories = uniqueCategories.map(category => ({
-          key: category,
-          value: category
-        }));
-        setCategories(formattedCategories);
-
-        // Fetch goals and separate by type
-        const goalsData = await goalService.getGoals();
-        
-        // Filter for spending goals
-        const spending = goalsData.filter(goal => goal.goal_type === 'spending');
-        const formattedSpendingGoals = spending.map(goal => ({
-          key: goal.id,
-          value: `${goal.name} ($${goal.amount})`
-        }));
-        setSpendingGoals(formattedSpendingGoals);
-        
-        // Filter for saving goals
-        const saving = goalsData.filter(goal => goal.goal_type === 'saving');
-        const formattedSavingGoals = saving.map(goal => ({
-          key: goal.id,
-          value: `${goal.name} ($${goal.amount})`
-        }));
-        setSavingGoals(formattedSavingGoals);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        Alert.alert('Error', 'Failed to load budgets and goals. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  useFocusEffect(
+        useCallback(() => {
+          console.log('Goals screen in focus - refreshing data');
+          fetchData();
+          return () => {
+            // Cleanup function (optional)
+          };
+        }, [])
+      );
 
   // Handler for form submission
   const submit = async () => {

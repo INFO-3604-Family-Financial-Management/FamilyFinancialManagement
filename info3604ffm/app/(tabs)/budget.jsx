@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl } from 'react-native'
 import React, { useState, useEffect, useCallback } from 'react'
 import { router } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import CustomButton from '@/components/CustomButton'
 import { budgetService } from '@/services/api'
@@ -81,6 +82,16 @@ const Budget = () => {
     setRefreshing(true);
     await fetchBudgets();
   }, []);
+
+  useFocusEffect(
+      useCallback(() => {
+        console.log('Goals screen in focus - refreshing data');
+        fetchBudgets();
+        return () => {
+          // Cleanup function (optional)
+        };
+      }, [])
+    );
 
   // Format currency values
   const formatCurrency = (amount) => {

@@ -1,6 +1,7 @@
 import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator, ScrollView, StatusBar } from 'react-native'
 import { router } from 'expo-router'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { familyService } from '../../services/api'
 import CustomButton from '../../components/CustomButton'
 import { Ionicons } from '@expo/vector-icons'
@@ -10,28 +11,38 @@ const Family = () => {
   const [loading, setLoading] = useState(true);
   const [hasFamily, setHasFamily] = useState(false);
 
+  const fetchFamilyData = async () => {
+    try {
+      setLoading(true);
+      const family = await familyService.getCurrentUserFamily();
+      if (family && family.name) {
+        setFamilyName(family.name);
+        setHasFamily(true);
+      } else {
+        setHasFamily(false);
+      }
+    } catch (error) {
+      console.error('Error fetching family:', error);
+      setHasFamily(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Fetch the family data when component mounts
-    const fetchFamilyData = async () => {
-      try {
-        setLoading(true);
-        const family = await familyService.getCurrentUserFamily();
-        if (family && family.name) {
-          setFamilyName(family.name);
-          setHasFamily(true);
-        } else {
-          setHasFamily(false);
-        }
-      } catch (error) {
-        console.error('Error fetching family:', error);
-        setHasFamily(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchFamilyData();
   }, []);
+
+  useFocusEffect(
+      useCallback(() => {
+        console.log('Goals screen in focus - refreshing data');
+        fetchFamilyData();
+        return () => {
+          // Cleanup function (optional)
+        };
+      }, [])
+    );
 
   // Family features with icons
   const familyFeatures = [
