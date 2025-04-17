@@ -416,14 +416,6 @@ const ExpenseTracking = () => {
             {!isContribution && (
               <>
                 {/* Category Dropdown */}
-                <Dropdown
-                  label="Category"
-                  placeholder="Select a category"
-                  value={form.category ? categories.find(c => c.key === form.category)?.value : null}
-                  items={categories}
-                  onSelect={(value) => setForm({ ...form, category: value })}
-                  icon="list-outline"
-                />
                 
                 {/* Budget Dropdown */}
                 <Dropdown

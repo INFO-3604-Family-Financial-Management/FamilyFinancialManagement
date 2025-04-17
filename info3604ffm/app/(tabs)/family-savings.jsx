@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     margin: 16,
     marginTop: 40,
-    height: '65%',
+    height: '75%',
     ...SHADOWS.medium,
   },
   monthTitle: {

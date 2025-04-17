@@ -98,13 +98,6 @@ const ProfileScreen = () => {
       route: '/streak-stats',
       description: 'View your login streak'
     },
-    {
-      title: 'Export Data',
-      icon: 'download-outline',
-      color: COLORS.error.main,
-      route: '/export-data',
-      description: 'Export your financial data'
-    }
   ];
 
   return (
