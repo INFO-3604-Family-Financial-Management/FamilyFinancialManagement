@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, SafeAreaView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, SafeAreaView, RefreshControl, ActivityIndicator, Alert, StyleSheet, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '../../components/CustomButton';
 import { expenseService } from '../../services/api';
+import { COLORS, SHADOWS, BORDER_RADIUS } from '../../constants/theme';
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
@@ -14,7 +15,7 @@ const Expenses = () => {
   const [error, setError] = useState(null);
 
   // Sorting and filtering states
-  const [sortOrder, setSortOrder] = useState('newest'); // 'newest', 'oldest', 'highest', 'lowest'
+  const [sortOrder, setSortOrder] = useState('oldest'); // Changed default from 'newest' to 'oldest'
   const [totalSpent, setTotalSpent] = useState(0);
 
   // Format currency
@@ -59,31 +60,57 @@ const Expenses = () => {
   const sortAndFilterExpenses = (data, order) => {
     let sorted = [...data];
 
-    // Apply sorting
+    // Apply sorting with improved date handling
     switch (order) {
       case 'newest':
-        sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.date || 0);
+          const dateB = new Date(b.date || 0);
+          return dateB - dateA;
+        });
         break;
       case 'oldest':
-        sorted.sort((a, b) => new Date(a.date) - new Date(b.date));
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.date || 0);
+          const dateB = new Date(b.date || 0);
+          return dateA - dateB;
+        });
         break;
       case 'highest':
-        sorted.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+        sorted.sort((a, b) => parseFloat(b.amount || 0) - parseFloat(a.amount || 0));
         break;
       case 'lowest':
-        sorted.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
+        sorted.sort((a, b) => parseFloat(a.amount || 0) - parseFloat(b.amount || 0));
         break;
       default:
-        sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Also change the default case to sort by oldest
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.date || 0);
+          const dateB = new Date(b.date || 0);
+          return dateA - dateB; // Changed from dateB - dateA to dateA - dateB
+        });
     }
+
+    // Log the sorted order to verify it's working
+    console.log(`Sorted expenses by ${order}, first item:`, 
+      sorted.length > 0 ? 
+        { date: sorted[0].date, amount: sorted[0].amount } : 
+        'No expenses'
+    );
 
     setFilteredExpenses(sorted);
   };
 
-  // Handle sorting change
+  // Handle sorting change with improved handling
   const handleSortChange = (order) => {
+    console.log(`Changing sort order to: ${order}`);
     setSortOrder(order);
+    
+    // Ensure we have the latest expenses data
     sortAndFilterExpenses(expenses, order);
+    
+    // Verify the state was updated
+    console.log(`Sort order is now: ${order}`);
   };
 
   // Delete expense
@@ -134,101 +161,177 @@ const Expenses = () => {
 
   // Render expense item
   const renderExpenseItem = ({ item }) => (
-    <View className="flex-row items-center justify-between p-4 bg-white rounded-lg mb-2 shadow">
-      <View className="flex-1">
-        <Text className="text-lg font-semibold">{item.description}</Text>
-        <Text className="text-gray-500">{formatDate(item.date)}</Text>
+    <TouchableOpacity
+      style={styles.expenseCard}
+      onPress={() => router.push({
+        pathname: '/expense-tracking',
+        params: { expenseId: item.id, mode: 'edit' }
+      })}
+    >
+      <View style={styles.expenseCardContent}>
+        <View style={styles.expenseIconContainer}>
+          <Ionicons 
+            name={item.category ? 
+              getCategoryIcon(item.category) : 
+              "cart-outline"} 
+            size={24} 
+            color={COLORS.primary.main} 
+          />
+        </View>
         
-        {/* Show budget association if available */}
-        {item.budget && (
-          <View className="flex-row items-center mt-1">
-            <Ionicons name="wallet-outline" size={14} color="#4B5563" />
-            <Text className="text-gray-500 ml-1">
-              Budgeted {item.budget.name || ''}
-            </Text>
+        <View style={styles.expenseDetails}>
+          <Text style={styles.expenseTitle} numberOfLines={1}>
+            {item.description}
+          </Text>
+          <Text style={styles.expenseDate}>
+            {formatDate(item.date)}
+          </Text>
+          
+          <View style={styles.expenseTags}>
+            {item.budget && (
+              <View style={styles.expenseTag}>
+                <Ionicons name="wallet-outline" size={12} color={COLORS.neutral[600]} />
+                <Text style={styles.expenseTagText}>
+                  {item.budget.name}
+                </Text>
+              </View>
+            )}
+            
+            {item.goal && (
+              <View style={styles.expenseTag}>
+                <Ionicons name="flag-outline" size={12} color={COLORS.neutral[600]} />
+                <Text style={styles.expenseTagText}>
+                  {item.goal.name}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
+        </View>
         
-        {/* Show goal association if available */}
-        {item.goal && (
-          <View className="flex-row items-center mt-1">
-            <Ionicons name="flag-outline" size={14} color="#4B5563" />
-            <Text className="text-gray-500 ml-1">
-              Goal {item.goal.name || ''}
-            </Text>
-          </View>
-        )}
+        <View style={styles.expenseAmountContainer}>
+          <Text style={styles.expenseAmount}>
+            {formatCurrency(item.amount)}
+          </Text>
+          
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDeleteExpense(item.id, item.description)}
+          >
+            <Ionicons name="trash-outline" size={18} color={COLORS.error.main} />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View className="flex-row items-center">
-        <Text className="text-lg font-bold mr-4">{formatCurrency(item.amount)}</Text>
-        <TouchableOpacity
-          onPress={() => handleDeleteExpense(item.id, item.description)}
-          className="p-2"
-        >
-          <Ionicons name="trash-outline" size={22} color="#FF0000" />
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
+  // Helper function to determine icon based on category
+  const getCategoryIcon = (category) => {
+    const lowerCategory = category.toLowerCase();
+    if (lowerCategory.includes('food')) return 'fast-food-outline';
+    if (lowerCategory.includes('transport')) return 'car-outline';
+    if (lowerCategory.includes('utilities')) return 'flash-outline';
+    if (lowerCategory.includes('entertainment')) return 'film-outline';
+    if (lowerCategory.includes('shopping')) return 'cart-outline';
+    if (lowerCategory.includes('health')) return 'medkit-outline';
+    if (lowerCategory.includes('education')) return 'school-outline';
+    return 'cash-outline';
+  };
+
+  // Filter options for the horizontal FlatList
+  const filterOptions = [
+    { id: 'newest', label: 'Newest', icon: 'time-outline' },
+    { id: 'oldest', label: 'Oldest', icon: 'calendar-outline' },
+    { id: 'highest', label: 'Highest', icon: 'trending-up-outline' },
+    { id: 'lowest', label: 'Lowest', icon: 'trending-down-outline' }
+  ];
+  
+  // Render a filter button item for the FlatList
+  const renderFilterItem = ({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        sortOrder === item.id && styles.activeFilterButton
+      ]}
+      onPress={() => handleSortChange(item.id)}
+    >
+      <Ionicons
+        name={item.icon}
+        size={16}
+        color={sortOrder === item.id ? COLORS.white : COLORS.neutral[600]}
+        style={styles.filterIcon}
+      />
+      <Text style={[
+        styles.filterButtonText,
+        sortOrder === item.id && styles.activeFilterText
+      ]}>
+        {item.label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // Loading state
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
+        
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Expenses</Text>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => router.push('/expense-tracking')}
+          >
+            <Ionicons name="add" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary.main} />
+          <Text style={styles.loadingText}>Loading your expenses...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView className="bg-gray-500 flex-1">
-      <View className="p-4">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-black text-2xl font-bold">All Expenses</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="p-2"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Expenses</Text>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push('/expense-tracking')}
+        >
+          <Ionicons name="add" size={24} color={COLORS.white} />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Summary Card */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryLabel}>Total Spent</Text>
+        <Text style={styles.summaryAmount}>{formatCurrency(totalSpent)}</Text>
+      </View>
+      
+      {/* Filters - Using FlatList instead of ScrollView */}
+      <View style={styles.filtersContainer}>
+        <FlatList
+          data={filterOptions}
+          renderItem={renderFilterItem}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterListContent}
+        />
+      </View>
 
-        {/* Total spent */}
-        <View className="bg-gray-700 rounded-lg p-4 mb-4">
-          <Text className="text-white text-center">Total Spent</Text>
-          <Text className="text-white text-2xl font-bold text-center">
-            {formatCurrency(totalSpent)}
-          </Text>
-        </View>
-
-        {/* Sorting options */}
-        <View className="bg-white rounded-lg p-2 mb-4 flex-row justify-around">
-          <TouchableOpacity
-            onPress={() => handleSortChange('newest')}
-            className={`py-1 px-3 rounded-lg ${sortOrder === 'newest' ? 'bg-gray-300' : ''}`}
-          >
-            <Text>Newest</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleSortChange('oldest')}
-            className={`py-1 px-3 rounded-lg ${sortOrder === 'oldest' ? 'bg-gray-300' : ''}`}
-          >
-            <Text>Oldest</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleSortChange('highest')}
-            className={`py-1 px-3 rounded-lg ${sortOrder === 'highest' ? 'bg-gray-300' : ''}`}
-          >
-            <Text>Highest</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleSortChange('lowest')}
-            className={`py-1 px-3 rounded-lg ${sortOrder === 'lowest' ? 'bg-gray-300' : ''}`}
-          >
-            <Text>Lowest</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Expense list */}
-        {loading && !refreshing ? (
-          <View className="flex-1 justify-center items-center mt-10">
-            <ActivityIndicator size="large" color="#FFF" />
-            <Text className="text-white mt-4">Loading expenses...</Text>
-          </View>
-        ) : error ? (
-          <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-white text-center">{error}</Text>
+      {/* Content */}
+      <View style={styles.content}>
+        {error ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="alert-circle-outline" size={60} color={COLORS.error.light} />
+            <Text style={styles.emptyTitle}>{error}</Text>
             <CustomButton
               title="Try Again"
               handlePress={fetchExpenses}
@@ -236,12 +339,16 @@ const Expenses = () => {
             />
           </View>
         ) : filteredExpenses.length === 0 ? (
-          <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-white text-center text-lg">No expenses found</Text>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={60} color={COLORS.neutral[400]} />
+            <Text style={styles.emptyTitle}>No Expenses Found</Text>
+            <Text style={styles.emptySubtitle}>
+              Start tracking your spending by adding your first expense.
+            </Text>
             <CustomButton
               title="Add Expense"
               handlePress={() => router.push('/expense-tracking')}
-              containerStyles="mt-4"
+              containerStyles="mt-5"
             />
           </View>
         ) : (
@@ -249,27 +356,232 @@ const Expenses = () => {
             data={filteredExpenses}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderExpenseItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            ListFooterComponent={
-              <View className="pb-20" />
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh} 
+                colors={[COLORS.primary.main]}
+                tintColor={COLORS.primary.main}
+              />
             }
           />
         )}
       </View>
-
-      {/* Add Expense Button */}
-      <View className="absolute bottom-5 right-5">
-        <TouchableOpacity
-          onPress={() => router.push('/expense-tracking')}
-          className="bg-indigo-200 w-14 h-14 rounded-full items-center justify-center shadow-lg"
-        >
-          <Ionicons name="add" size={30} color="#000" />
-        </TouchableOpacity>
-      </View>
+      
+      {/* Add button for mobile */}
+      <TouchableOpacity 
+        style={styles.floatingActionButton}
+        onPress={() => router.push('/expense-tracking')}
+      >
+        <Ionicons name="add" size={30} color={COLORS.white} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  header: {
+    backgroundColor: COLORS.primary.main,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    ...SHADOWS.medium,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summaryCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 20,
+    backgroundColor: COLORS.primary.main,
+    borderRadius: 16,
+    alignItems: 'center',
+    ...SHADOWS.medium,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: COLORS.white,
+    opacity: 0.8,
+    marginBottom: 8,
+  },
+  summaryAmount: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  filtersContainer: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    height: 50, // Fixed height to avoid layout shifts
+  },
+  filterListContent: {
+    paddingVertical: 4,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 50,
+    marginRight: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+    ...SHADOWS.tiny,
+  },
+  activeFilterButton: {
+    backgroundColor: COLORS.primary.main,
+    borderColor: COLORS.primary.main,
+  },
+  filterIcon: {
+    marginRight: 6,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.neutral[700],
+  },
+  activeFilterText: {
+    color: COLORS.white,
+  },
+  content: {
+    flex: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.neutral[600],
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.neutral[800],
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.neutral[600],
+    textAlign: 'center',
+    maxWidth: '80%',
+  },
+  listContent: {
+    paddingBottom: 100, // Extra space for FAB
+  },
+  expenseCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    marginBottom: 12,
+    ...SHADOWS.small,
+    overflow: 'hidden',
+  },
+  expenseCardContent: {
+    flexDirection: 'row',
+    padding: 16,
+  },
+  expenseIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primary.light + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  expenseDetails: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  expenseTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.neutral[800],
+    marginBottom: 4,
+  },
+  expenseDate: {
+    fontSize: 12,
+    color: COLORS.neutral[500],
+    marginBottom: 6,
+  },
+  expenseTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  expenseTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.neutral[200],
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  expenseTagText: {
+    fontSize: 10,
+    color: COLORS.neutral[700],
+    marginLeft: 4,
+  },
+  expenseAmountContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  expenseAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.error.main,
+    marginBottom: 12,
+  },
+  deleteButton: {
+    padding: 6,
+  },
+  floatingActionButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...SHADOWS.medium,
+  },
+});
 
 export default Expenses;

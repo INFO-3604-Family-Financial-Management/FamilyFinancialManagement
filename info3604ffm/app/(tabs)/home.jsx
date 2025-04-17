@@ -255,39 +255,7 @@ const HomeScreen = () => {
           }}>
             {formatCurrency(userData.income)}
           </Text>
-          
-          {/* Spending progress bar */}
-          <View style={{ marginVertical: 8 }}>
-            <View style={{ 
-              flexDirection: 'row', 
-              justifyContent: 'space-between',
-              marginBottom: 6 
-            }}>
-              <Text style={{ fontSize: 12, color: COLORS.white, opacity: 0.8 }}>
-                Spending
-              </Text>
-              <Text style={{ fontSize: 12, color: COLORS.white }}>
-                {formatCurrency(userData.budgetStatus.used)} / {formatCurrency(userData.income)}
-              </Text>
-            </View>
-            
-            <View style={{ 
-              height: 8, 
-              backgroundColor: 'rgba(255,255,255,0.2)', 
-              borderRadius: 4, 
-              overflow: 'hidden'
-            }}>
-              <View 
-                style={{ 
-                  width: `${spendingPercentage}%`, 
-                  height: '100%', 
-                  backgroundColor: spendingPercentage > 80 ? COLORS.error.main : COLORS.secondary.main,
-                  borderRadius: 4
-                }} 
-              />
-            </View>
-          </View>
-          
+         
           {/* Quick actions */}
           <View style={{ 
             flexDirection: 'row', 

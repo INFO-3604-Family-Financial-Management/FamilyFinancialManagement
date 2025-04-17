@@ -1,10 +1,12 @@
-import { View, Text, SafeAreaView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native'
+import { View, Text, SafeAreaView, Alert, ActivityIndicator, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
 import FormField from '@/components/FormField'
 import CustomButton from '@/components/CustomButton'
 import { goalService } from '@/services/api'
 import Checkbox from 'expo-checkbox'
+import { Ionicons } from '@expo/vector-icons'
+import { COLORS, SHADOWS, BORDER_RADIUS } from '../../constants/theme'
 
 const EditFamilyGoal = () => {
   const params = useLocalSearchParams();
@@ -120,70 +122,293 @@ const EditFamilyGoal = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView className='bg-gray-500 h-full'>
-        <View className='mt-10 items-center'>
-          <Text className='text-black font-bold text-3xl'>Edit Family Goal</Text>
-          <ActivityIndicator size="large" color="#FFF" className="mt-10" />
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Family Goal</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary.main} />
+          <Text style={styles.loadingText}>Loading goal data...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className='bg-gray-500 h-full'>
-      <View className='mt-10 items-center'>
-        <Text className='text-black font-bold text-3xl'>Edit Family Goal</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Family Goal</Text>
+        <View style={{ width: 24 }} />
       </View>
-      <View className='bg-gray-500 p-4 rounded-lg m-4 mt-10 h-[65vh]'>
-        <Text className="text-2xl font-bold text-gray-900 text-center">
-          Goal Type: {form.goalType === 'saving' ? 'Saving' : 'Spending'}
-        </Text>
-        
-        <FormField
-          title="Goal Name"
-          value={form.name}
-          handleChangeText={(text) => setForm({...form, name: text})}
-          otherStyles="mt-7"
-        />
-        
-        <FormField
-          title="Goal Amount"
-          value={form.amount}
-          handleChangeText={(text) => setForm({...form, amount: text})}
-          keyboardType="numeric"
-          otherStyles="mt-7"
-        />
-
-        <View className='mt-10'>
-          <Text className='text-base text-gray-100 text-medium'>Goal Type</Text>
-          <View className='border-2 border-white w-full p-4 bg-white rounded-2xl focus:border-black'>
-            <TouchableOpacity onPress={() => setForm({...form, goalType: 'saving'})} className="mb-2 flex-row items-center">
-              <Checkbox value={form.goalType === 'saving'} onValueChange={() => setForm({...form, goalType: 'saving'})} />
-              <Text className="ml-2">Saving</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setForm({...form, goalType: 'spending'})} className="mb-2 flex-row items-center">
-              <Checkbox value={form.goalType === 'spending'} onValueChange={() => setForm({...form, goalType: 'spending'})} />
-              <Text className="ml-2">Spending</Text>
-            </TouchableOpacity>
+      
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Goal Form Card */}
+        <View style={styles.formCard}>
+          <Text style={styles.sectionTitle}>Goal Details</Text>
+          
+          {/* Name Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Goal Name</Text>
+            <View style={styles.textInputContainer}>
+              <FormField
+                title=""
+                value={form.name}
+                handleChangeText={(text) => setForm({...form, name: text})}
+                icon="bookmark-outline"
+              />
+            </View>
+          </View>
+          
+          {/* Amount Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Goal Amount</Text>
+            <View style={styles.textInputContainer}>
+              <FormField
+                title=""
+                value={form.amount}
+                handleChangeText={(text) => setForm({...form, amount: text})}
+                keyboardType="numeric"
+                icon="calculator-outline"
+              />
+            </View>
+          </View>
+          
+          {/* Goal Type Selection */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Goal Type</Text>
+            <View style={styles.checkboxContainer}>
+              <TouchableOpacity 
+                style={styles.checkboxOption}
+                onPress={() => setForm({...form, goalType: 'saving'})}
+              >
+                <Checkbox 
+                  value={form.goalType === 'saving'} 
+                  onValueChange={() => setForm({...form, goalType: 'saving'})}
+                  color={form.goalType === 'saving' ? COLORS.primary.main : undefined}
+                  style={styles.checkbox}
+                />
+                <View style={styles.checkboxContent}>
+                  <Text style={styles.checkboxLabel}>Saving</Text>
+                  <Text style={styles.checkboxDescription}>Track money you want to save</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.checkboxOption}
+                onPress={() => setForm({...form, goalType: 'spending'})}
+              >
+                <Checkbox 
+                  value={form.goalType === 'spending'} 
+                  onValueChange={() => setForm({...form, goalType: 'spending'})}
+                  color={form.goalType === 'spending' ? COLORS.primary.main : undefined}
+                  style={styles.checkbox}
+                />
+                <View style={styles.checkboxContent}>
+                  <Text style={styles.checkboxLabel}>Spending</Text>
+                  <Text style={styles.checkboxDescription}>Track money you plan to spend</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+      </ScrollView>
+      
+      {/* Action Buttons */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={styles.cancelButton}
+          onPress={() => router.push("/family-goals")}
+        >
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
         
-        <CustomButton
-          title={submitting ? "Saving..." : "Save"}
-          handlePress={handleSubmit}
-          containerStyles="mx-8 mt-10 w-half"
-          isLoading={submitting}
-        />
-        
-        <CustomButton
-          title="Cancel"
-          handlePress={() => router.push("/family-goals")}
-          containerStyles="mx-8 mt-5 w-half"
-        />
+        <TouchableOpacity 
+          style={[
+            styles.saveButton,
+            submitting && styles.disabledButton
+          ]}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <Text style={styles.saveButtonText}>Saving...</Text>
+          ) : (
+            <Text style={styles.saveButtonText}>Save Changes</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  header: {
+    backgroundColor: COLORS.primary.main,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    ...SHADOWS.medium,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.neutral[600],
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 100, // Extra space for bottom buttons
+  },
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    ...SHADOWS.small,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.neutral[800],
+    marginBottom: 16,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.neutral[700],
+    marginBottom: 8,
+  },
+  textInputContainer: {
+    borderRadius: 12,
+  },
+  checkboxContainer: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 12,
+    padding: 8,
+  },
+  checkboxOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    ...SHADOWS.tiny,
+  },
+  checkbox: {
+    marginRight: 12,
+    height: 22,
+    width: 22,
+    borderRadius: 4,
+  },
+  checkboxContent: {
+    flex: 1,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.neutral[800],
+    marginBottom: 2,
+  },
+  checkboxDescription: {
+    fontSize: 12,
+    color: COLORS.neutral[500],
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.neutral[200],
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[300],
+    borderRadius: 12,
+  },
+  cancelButtonText: {
+    color: COLORS.neutral[700],
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  saveButton: {
+    flex: 2,
+    backgroundColor: COLORS.primary.main,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    ...SHADOWS.small,
+  },
+  saveButtonText: {
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+});
 
 export default EditFamilyGoal

@@ -19,6 +19,52 @@ import { Ionicons } from '@expo/vector-icons';
 import { budgetService, profileService } from '../../services/api';
 import { COLORS, SHADOWS, BORDER_RADIUS } from '../../constants/theme';
 
+// Move InputField component outside of the main component function
+const InputField = ({ label, value, onChange, placeholder, keyboardType, error }) => (
+  <View style={{ marginBottom: 16 }}>
+    <Text style={{ 
+      fontSize: 16, 
+      fontWeight: '500', 
+      color: COLORS.neutral[700],
+      marginBottom: 8
+    }}>
+      {label}
+    </Text>
+    
+    <View style={{
+      backgroundColor: COLORS.white,
+      borderRadius: 12,
+      borderWidth: error ? 1 : 0,
+      borderColor: error ? COLORS.error.main : 'transparent',
+      ...SHADOWS.small
+    }}>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        keyboardType={keyboardType || 'default'}
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          fontSize: 16,
+          color: COLORS.neutral[800]
+        }}
+      />
+    </View>
+    
+    {error && (
+      <Text style={{ 
+        color: COLORS.error.main, 
+        fontSize: 12, 
+        marginTop: 4, 
+        marginLeft: 4 
+      }}>
+        {error}
+      </Text>
+    )}
+  </View>
+);
+
 const CreateBudget = () => {
   // Get params from route
   const params = useLocalSearchParams();
@@ -170,52 +216,6 @@ const CreateBudget = () => {
       setSubmitting(false);
     }
   };
-
-  // Input field component
-  const InputField = ({ label, value, onChange, placeholder, keyboardType, error }) => (
-    <View style={{ marginBottom: 16 }}>
-      <Text style={{ 
-        fontSize: 16, 
-        fontWeight: '500', 
-        color: COLORS.neutral[700],
-        marginBottom: 8
-      }}>
-        {label}
-      </Text>
-      
-      <View style={{
-        backgroundColor: COLORS.white,
-        borderRadius: 12,
-        borderWidth: error ? 1 : 0,
-        borderColor: error ? COLORS.error.main : 'transparent',
-        ...SHADOWS.small
-      }}>
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          keyboardType={keyboardType || 'default'}
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            fontSize: 16,
-            color: COLORS.neutral[800]
-          }}
-        />
-      </View>
-      
-      {error && (
-        <Text style={{ 
-          color: COLORS.error.main, 
-          fontSize: 12, 
-          marginTop: 4, 
-          marginLeft: 4 
-        }}>
-          {error}
-        </Text>
-      )}
-    </View>
-  );
 
   if (loading) {
     return (

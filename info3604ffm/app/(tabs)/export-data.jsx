@@ -4,7 +4,7 @@ import React from 'react'
 const ExportData = () => {
   return (
     <View>
-      <Text className='text-black mt-10'>ABFSHBFH</Text>
+      <Text className='text-black mt-10'>EMPTY</Text>
     </View>
   )
 }
