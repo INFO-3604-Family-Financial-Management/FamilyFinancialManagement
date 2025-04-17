@@ -1,26 +1,35 @@
-import { View, Text, SafeAreaView, Image, TouchableOpacity, StatusBar } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert, Image } from 'react-native'
 import React, { useState, useEffect } from 'react'
-import CustomButton from '@/components/CustomButton'
-import { useAuth } from '@/context/AuthContext'
-import icons from "../../constants/icons"
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { profileService } from '../../services/api'
 import { Ionicons } from '@expo/vector-icons'
+import { useAuth } from '../../context/AuthContext'
+import { profileService } from '../../services/api'
+import { COLORS, SHADOWS, BORDER_RADIUS } from '../../constants/theme'
 
-const Profile = () => {
+const ProfileScreen = () => {
   const { logout } = useAuth();
-  const [username, setUsername] = useState('');
+  const [userData, setUserData] = useState({
+    username: '',
+    email: '',
+    income: 0,
+    joinDate: null
+  });
   const [loading, setLoading] = useState(true);
   
+  // Fetch user profile data
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
         const profile = await profileService.getUserProfile();
-        // Get username from profile
-        if (profile && profile.username) {
-          setUsername(profile.username);
-        }
+        
+        setUserData({
+          username: profile.username || '',
+          email: profile.email || '',
+          income: parseFloat(profile.monthly_income || 0),
+          joinDate: profile.created_at ? new Date(profile.created_at) : null
+        });
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -31,89 +40,330 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  // Menu items with their icons and destinations
+  // Format currency
+  const formatCurrency = (amount) => {
+    return `$${parseFloat(amount).toFixed(2)}`;
+  };
+  
+  // Format join date
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Handle logout with confirmation
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to log out?",
+      [
+        { 
+          text: "Cancel", 
+          style: "cancel" 
+        },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: () => logout()
+        }
+      ]
+    );
+  };
+  
+  // Profile menu items
   const menuItems = [
     {
       title: 'Update Income',
       icon: 'cash-outline',
-      destination: 'edit-profile',
-      color: '#4B5563' // Gray color
+      color: COLORS.primary.main,
+      route: '/edit-profile',
+      description: 'Update your monthly income'
     },
     {
-      title: 'Budgets',
+      title: 'Budget Management',
       icon: 'wallet-outline',
-      destination: 'budget',
-      color: '#4B5563' // Gray color
+      color: COLORS.secondary.main,
+      route: '/budget',
+      description: 'Manage your budgets'
+    },
+    {
+      title: 'Streak Statistics',
+      icon: 'flame-outline',
+      color: COLORS.success.main,
+      route: '/streak-stats',
+      description: 'View your login streak'
     },
     {
       title: 'Export Data',
       icon: 'download-outline',
-      destination: 'export-data',
-      color: '#4B5563' // Gray color
+      color: COLORS.error.main,
+      route: '/export-data',
+      description: 'Export your financial data'
     }
   ];
 
   return (
-    <SafeAreaView className="bg-gray-500 h-full">
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background.primary }}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
       
-      {/* Top curved design with profile info */}
-      <View className="bg-indigo-200 pt-12 pb-16 rounded-b-3xl shadow-md">
-        <View className="px-6">
-          <Text className="text-black text-2xl font-bold text-center mb-6">My Profile</Text>
+      {/* Header */}
+      <View style={{
+        backgroundColor: COLORS.primary.main,
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+        ...SHADOWS.medium
+      }}>
+        <Text style={{
+          fontSize: 20,
+          fontWeight: '700',
+          color: COLORS.white,
+          textAlign: 'center'
+        }}>
+          My Profile
+        </Text>
+      </View>
+      
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Profile Header */}
+        <View style={{
+          alignItems: 'center',
+          paddingVertical: 24,
+          paddingHorizontal: 16
+        }}>
+          <View style={{
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: COLORS.primary.light,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 16,
+            ...SHADOWS.medium
+          }}>
+            <Ionicons name="person" size={50} color={COLORS.primary.main} />
+          </View>
           
-          {/* Profile image and username */}
-          <View className="items-center">
-            <View className="bg-white rounded-full p-5 shadow-md">
-              <Image
-                source={icons.profile}
-                resizeMode="contain"
-                className="w-16 h-16"
-              />
-            </View>
-            <Text className="text-gray-800 text-xl font-bold mt-4">
-              {loading ? 'Loading...' : username}
+          <Text style={{
+            fontSize: 24,
+            fontWeight: '700',
+            color: COLORS.neutral[800],
+            marginBottom: 4
+          }}>
+            {userData.username || 'User'}
+          </Text>
+          
+          <Text style={{
+            fontSize: 16,
+            color: COLORS.neutral[600],
+            marginBottom: 12
+          }}>
+            {userData.email || 'email@example.com'}
+          </Text>
+          
+          <View style={{
+            flexDirection: 'row',
+            backgroundColor: COLORS.background.secondary,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 12
+          }}>
+            <Text style={{
+              color: COLORS.neutral[600],
+              fontWeight: '500'
+            }}>
+              Member since:
+            </Text>
+            <Text style={{
+              color: COLORS.neutral[800],
+              fontWeight: '600',
+              marginLeft: 4
+            }}>
+              {formatDate(userData.joinDate)}
             </Text>
           </View>
         </View>
-      </View>
-      
-      {/* Menu items - Staggered for visual interest */}
-      <View className="-mt-8 mx-5 z-10">
-        <View className="bg-white rounded-3xl shadow-md p-6 mb-4">
-          {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index}
-              onPress={() => router.push(item.destination)}
-              className="flex-row items-center border border-gray-200 rounded-xl p-4 mb-3"
+        
+        {/* Monthly Income Card */}
+        <View style={{
+          margin: 16,
+          padding: 16,
+          backgroundColor: COLORS.white,
+          borderRadius: 16,
+          ...SHADOWS.small
+        }}>
+          <Text style={{
+            fontSize: 16,
+            color: COLORS.neutral[600],
+            marginBottom: 4
+          }}>
+            Monthly Income
+          </Text>
+          
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Text style={{
+              fontSize: 24,
+              fontWeight: '700',
+              color: COLORS.neutral[800]
+            }}>
+              {formatCurrency(userData.income)}
+            </Text>
+            
+            <TouchableOpacity
+              onPress={() => router.push('/edit-profile')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: COLORS.primary.light,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8
+              }}
             >
-              <View className="bg-gray-100 rounded-full p-2 mr-4">
-                <Ionicons name={item.icon} size={24} color={item.color} />
+              <Ionicons name="pencil" size={14} color={COLORS.primary.main} />
+              <Text style={{
+                marginLeft: 4,
+                color: COLORS.primary.main,
+                fontWeight: '500'
+              }}>
+                Update
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        {/* Menu Items */}
+        <View style={{
+          paddingHorizontal: 16,
+          marginBottom: 24
+        }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: '600',
+            color: COLORS.neutral[800],
+            marginBottom: 12
+          }}>
+            Profile Settings
+          </Text>
+          
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => router.push(item.route)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: COLORS.white,
+                padding: 16,
+                borderRadius: 12,
+                marginBottom: 12,
+                ...SHADOWS.small
+              }}
+            >
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: `${item.color}15`,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 12
+              }}>
+                <Ionicons name={item.icon} size={20} color={item.color} />
               </View>
-              <Text className="text-gray-800 text-lg font-medium flex-1">{item.title}</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: COLORS.neutral[800],
+                  marginBottom: 2
+                }}>
+                  {item.title}
+                </Text>
+                
+                <Text style={{
+                  fontSize: 12,
+                  color: COLORS.neutral[500]
+                }}>
+                  {item.description}
+                </Text>
+              </View>
+              
+              <Ionicons name="chevron-forward" size={20} color={COLORS.neutral[400]} />
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+        
+        {/* App Info Card */}
+        <View style={{
+          marginHorizontal: 16,
+          padding: 16,
+          backgroundColor: COLORS.background.secondary,
+          borderRadius: 16
+        }}>
+          <Text style={{
+            fontSize: 14,
+            color: COLORS.neutral[600],
+            textAlign: 'center',
+            marginBottom: 8
+          }}>
+            TFR Finance v1.0.0
+          </Text>
+          
+          <Text style={{
+            fontSize: 12,
+            color: COLORS.neutral[500],
+            textAlign: 'center'
+          }}>
+            Family Financial Management
+          </Text>
+        </View>
+      </ScrollView>
       
-      {/* App version info */}
-      <View className="items-center mt-6">
-        <Text className="text-gray-600 text-xs">TFR Finance v1.0.0</Text>
-      </View>
-      
-      {/* Logout button with better styling */}
-      <View className="absolute bottom-8 w-full px-5">
-        <TouchableOpacity 
-          onPress={logout}
-          className="bg-red-500 p-4 rounded-xl flex-row justify-center items-center shadow-md"
+      {/* Logout Button */}
+      <View style={{
+        padding: 16,
+        paddingBottom: 24,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.neutral[200],
+        backgroundColor: COLORS.white
+      }}>
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={{
+            backgroundColor: COLORS.error.main,
+            paddingVertical: 14,
+            borderRadius: 12,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            ...SHADOWS.small
+          }}
         >
-          <Ionicons name="log-out-outline" size={22} color="white" className="mr-2" />
-          <Text className="text-white font-bold text-lg ml-2">Logout</Text>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+          <Text style={{
+            color: COLORS.white,
+            fontWeight: '600',
+            fontSize: 16,
+            marginLeft: 8
+          }}>
+            Logout
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   )
 }
 
-export default Profile
+export default ProfileScreen;

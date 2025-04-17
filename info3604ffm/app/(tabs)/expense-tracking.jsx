@@ -3,44 +3,108 @@ import {
   View, 
   Text, 
   ScrollView, 
-  Alert, 
-  ActivityIndicator, 
+  Keyboard,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
-
+  TextInput,
+  StyleSheet,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SelectList } from "react-native-dropdown-select-list";
-import FormField from "@/components/FormField";
-import CustomButton from "@/components/CustomButton";
-import { useFocusEffect } from '@react-navigation/native'
-import { expenseService, budgetService, goalService, contributionService } from "@/services/api";
 import { router } from "expo-router";
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { 
+  expenseService, 
+  budgetService, 
+  goalService, 
+  contributionService 
+} from "@/services/api";
+import { COLORS, SHADOWS, BORDER_RADIUS, SPACING } from '@/constants/theme';
+import Button from '@/components/Button';
 
-const ExpenseTracking = () => {
-  // State to toggle between expense and contribution
-  const [isContribution, setIsContribution] = useState(false);
+// Dropdown component with consistent style
+const Dropdown = ({ label, placeholder, value, items, onSelect, icon }) => {
+  const [isOpen, setIsOpen] = useState(false);
   
-  // Form state
+  return (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      
+      <TouchableOpacity 
+        style={styles.dropdown}
+        onPress={() => {
+          Keyboard.dismiss();
+          setIsOpen(!isOpen);
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {icon && (
+            <Ionicons name={icon} size={20} color={COLORS.neutral[400]} style={{ marginRight: 8 }} />
+          )}
+          <Text style={[
+            styles.dropdownText, 
+            !value && { color: COLORS.neutral[400] }
+          ]}>
+            {value || placeholder}
+          </Text>
+        </View>
+        <Ionicons 
+          name={isOpen ? "chevron-up" : "chevron-down"} 
+          size={20} 
+          color={COLORS.neutral[400]} 
+        />
+      </TouchableOpacity>
+      
+      {isOpen && (
+        <View style={styles.dropdownMenu}>
+          <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 200 }}>
+            {items.map((item, index) => (
+              <TouchableOpacity 
+                key={item.key || index}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  onSelect(item.key);
+                  setIsOpen(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  value === item.key && { color: COLORS.primary.main, fontWeight: '600' }
+                ]}>
+                  {item.value}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// Main component
+const ExpenseTracking = () => {
+  // State management
+  const [isContribution, setIsContribution] = useState(false);
   const [form, setForm] = useState({
     title: "",
-    value: "",
+    amount: "",
     category: null,
-    description: "",
     budget: null,
     goal: null
   });
-
-  // Data states
   const [categories, setCategories] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [spendingGoals, setSpendingGoals] = useState([]);
   const [savingGoals, setSavingGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
+  // Fetch data from API
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -49,13 +113,13 @@ const ExpenseTracking = () => {
       let familyBudgets = [];
       
       try {
-        // Try to fetch family budgets (might fail if user has no family)
+        // Try to fetch family budgets
         familyBudgets = await budgetService.getFamilyBudgets();
       } catch (error) {
-        console.log('User might not have a family, skipping family budgets');
+        console.log('No family budgets available');
       }
       
-      // Combine and format budgets, adding a label to distinguish family budgets
+      // Format budgets for dropdown
       const formattedBudgets = [
         ...personalBudgets.map(budget => ({
           key: budget.id,
@@ -71,7 +135,7 @@ const ExpenseTracking = () => {
       
       setBudgets(formattedBudgets);
 
-      // Extract unique categories from all budgets
+      // Extract unique categories from budgets
       const uniqueCategories = [...new Set([
         ...personalBudgets.map(budget => budget.category),
         ...familyBudgets.map(budget => budget.category)
@@ -81,12 +145,13 @@ const ExpenseTracking = () => {
         key: category,
         value: category
       }));
+      
       setCategories(formattedCategories);
 
       // Fetch goals and separate by type
       const goalsData = await goalService.getGoals();
       
-      // Filter for spending goals
+      // Filter and format spending goals
       const spending = goalsData.filter(goal => goal.goal_type === 'spending');
       const formattedSpendingGoals = spending.map(goal => ({
         key: goal.id,
@@ -95,7 +160,7 @@ const ExpenseTracking = () => {
       }));
       setSpendingGoals(formattedSpendingGoals);
       
-      // Filter for saving goals
+      // Filter and format saving goals
       const saving = goalsData.filter(goal => goal.goal_type === 'saving');
       const formattedSavingGoals = saving.map(goal => ({
         key: goal.id,
@@ -105,49 +170,60 @@ const ExpenseTracking = () => {
       setSavingGoals(formattedSavingGoals);
     } catch (error) {
       console.error('Error fetching data:', error);
-      Alert.alert('Error', 'Failed to load budgets and goals. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch budgets and goals when component mounts
+  // Initial data fetch
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       console.log('Expense tracking screen in focus - refreshing data');
       fetchData();
       return () => {
-        // Cleanup function (optional)
+        // Optional cleanup
       };
     }, [])
   );
 
-  // Handler for form submission
-  const submit = async () => {
+  // Form validation
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!isContribution && !form.title.trim()) {
+      newErrors.title = 'Description is required';
+    }
+    
+    if (!form.amount.trim()) {
+      newErrors.amount = 'Amount is required';
+    } else if (isNaN(parseFloat(form.amount)) || parseFloat(form.amount) <= 0) {
+      newErrors.amount = 'Please enter a valid amount greater than 0';
+    }
+    
+    if (isContribution && !form.goal) {
+      newErrors.goal = 'Please select a savings goal';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Form submission
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    
     try {
-      // Validate form
-      if (!form.title.trim() && !isContribution) {
-        Alert.alert('Error', 'Please enter a title');
-        return;
-      }
-
-      const amount = parseFloat(form.value);
-      if (isNaN(amount) || amount <= 0) {
-        Alert.alert('Error', 'Please enter a valid amount greater than 0');
-        return;
-      }
-
-      if (isContribution && !form.goal) {
-        Alert.alert('Error', 'Please select a savings goal for your contribution');
-        return;
-      }
-
+      setSubmitting(true);
+      
+      const amount = parseFloat(form.amount);
+      
       if (isContribution) {
-        // Submit as a contribution to a savings goal
+        // Process as a contribution to a savings goal
         const contributionData = {
           amount: amount,
           goal: form.goal
@@ -155,263 +231,497 @@ const ExpenseTracking = () => {
 
         await contributionService.createContribution(contributionData);
         
-        Alert.alert(
-          'Success',
-          'Contribution added successfully',
-          [{ text: 'OK', onPress: () => router.push('/goals') }]
-        );
+        router.push({
+          pathname: '/goals',
+          params: { success: true, type: 'contribution' }
+        });
       } else {
-        // For expense, we need to check if the selected budget or goal is a family one
-        const selectedBudget = form.budget ? budgets.find(b => b.key === form.budget) : null;
-        const selectedGoal = form.goal ? spendingGoals.find(g => g.key === form.goal) : null;
-        
-        // Create the expense data
+        // Process as an expense
         const expenseData = {
           description: form.title,
           amount: amount,
           budget: form.budget,
           goal: form.goal
         };
-        
-        // Log what type of expense we're creating
-        if (selectedBudget?.isFamily || selectedGoal?.isFamily) {
-          console.log('Creating expense associated with a family budget or goal');
-        } else {
-          console.log('Creating expense associated with a personal budget or goal');
-        }
 
         await expenseService.addExpense(expenseData);
         
-        Alert.alert(
-          'Success',
-          'Expense added successfully',
-          [{ text: 'OK', onPress: () => router.push('/home') }]
-        );
+        router.push({
+          pathname: '/home',
+          params: { success: true, type: 'expense' }
+        });
       }
 
-      // Clear form after successful submission
+      // Reset form
       setForm({
         title: "",
-        value: "",
+        amount: "",
         category: null,
-        description: "",
         budget: null,
         goal: null
       });
       
     } catch (error) {
-      console.error('Add transaction error:', error);
-      Alert.alert('Error', error.message || 'Failed to add transaction');
+      console.error('Transaction error:', error);
+      alert(error.message || 'Failed to process transaction');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // If still loading, show spinner
+  // Cancel and go back
+  const handleCancel = () => {
+    router.back();
+  };
+
   if (loading) {
     return (
-      <SafeAreaView className="bg-gray-500 h-full flex-1">
-        <StatusBar barStyle="light-content" />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#FFF" />
-          <Text className="text-white mt-4 font-medium">Loading data...</Text>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary.main} />
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="bg-gray-500 flex-1">
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary.main} />
       
-      {/* Header with back button */}
-      <View className="flex-row items-center justify-between px-4 pt-2 pb-4">
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity 
-          onPress={() => router.back()}
-          className="bg-gray-700 rounded-full p-2"
+          onPress={handleCancel}
+          style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold">
-          {isContribution ? 'New Contribution' : 'New Expense'}
+        
+        <Text style={styles.headerTitle}>
+          {isContribution ? 'Add Contribution' : 'Add Expense'}
         </Text>
-        <View style={{ width: 32 }} /> {/* Empty view for even spacing */}
+        
+        <View style={{ width: 40 }} />
       </View>
-
+      
+      {/* Transaction Type Switcher */}
+      <View style={styles.typeSwitcherContainer}>
+        <View style={styles.typeSwitcher}>
+          <TouchableOpacity 
+            style={[
+              styles.typeOption,
+              !isContribution && styles.activeTypeOption
+            ]}
+            onPress={() => setIsContribution(false)}
+          >
+            <Ionicons 
+              name="cart-outline" 
+              size={18} 
+              color={!isContribution ? COLORS.white : COLORS.neutral[500]} 
+            />
+            <Text style={[
+              styles.typeOptionText,
+              !isContribution && styles.activeTypeOptionText
+            ]}>
+              Expense
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.typeOption,
+              isContribution && styles.activeTypeOption
+            ]}
+            onPress={() => setIsContribution(true)}
+          >
+            <Ionicons 
+              name="save-outline" 
+              size={18} 
+              color={isContribution ? COLORS.white : COLORS.neutral[500]} 
+            />
+            <Text style={[
+              styles.typeOptionText,
+              isContribution && styles.activeTypeOptionText
+            ]}>
+              Contribution
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+        style={styles.formContainer}
       >
         <ScrollView 
-          className="flex-1 px-4"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Transaction Type Toggle */}
-          <View className="flex-row justify-center mb-8 mt-2">
-            <View className="bg-gray-700 p-1 rounded-full flex-row shadow-md">
-              <TouchableOpacity 
-                className={`py-2 px-5 rounded-full ${!isContribution ? 'bg-indigo-500' : 'bg-transparent'}`}
-                onPress={() => setIsContribution(false)}
-              >
-                <Text className={`font-medium ${!isContribution ? 'text-white' : 'text-gray-300'}`}>
-                  Expense
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className={`py-2 px-5 rounded-full ${isContribution ? 'bg-indigo-500' : 'bg-transparent'}`}
-                onPress={() => setIsContribution(true)}
-              >
-                <Text className={`font-medium ${isContribution ? 'text-white' : 'text-gray-300'}`}>
-                  Contribution
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          {/* Card Container */}
-          <View className="bg-gray-700 rounded-2xl p-5 shadow-lg mb-6">
-            {/* Title/Description Field - only for expenses */}
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            {/* Description/Title Field - only for expenses */}
             {!isContribution && (
-              <FormField
-                title="What did you spend on?"
-                value={form.title}
-                placeholder="Enter expense name"
-                handleChangeText={(text) => setForm({ ...form, title: text })}
-                otherStyles="mb-4"
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="What did you spend on?"
+                  placeholderTextColor={COLORS.neutral[400]}
+                  value={form.title}
+                  onChangeText={(text) => {
+                    setForm({ ...form, title: text });
+                    if (errors.title) {
+                      setErrors({ ...errors, title: null });
+                    }
+                  }}
+                />
+                {errors.title && (
+                  <Text style={styles.errorText}>{errors.title}</Text>
+                )}
+              </View>
             )}
             
             {/* Amount Field */}
-            <FormField
-              title={isContribution ? "How much are you contributing?" : "How much did you spend?"}
-              value={form.value}
-              placeholder="Enter amount"
-              handleChangeText={(text) => setForm({ ...form, value: text })}
-              keyboardType="numeric"
-              otherStyles="mb-4"
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                {isContribution ? 'Contribution Amount' : 'Expense Amount'}
+              </Text>
+              <View style={styles.amountInputContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor={COLORS.neutral[400]}
+                  keyboardType="decimal-pad"
+                  value={form.amount}
+                  onChangeText={(text) => {
+                    // Only allow numbers and a single decimal point
+                    if (/^\d*\.?\d*$/.test(text) || text === '') {
+                      setForm({ ...form, amount: text });
+                      if (errors.amount) {
+                        setErrors({ ...errors, amount: null });
+                      }
+                    }
+                  }}
+                />
+              </View>
+              {errors.amount && (
+                <Text style={styles.errorText}>{errors.amount}</Text>
+              )}
+            </View>
             
-            {/* For Expenses: Category, Budget, and Spending Goal */}
+            {/* For Expenses: Category and Budget */}
             {!isContribution && (
               <>
-                {/* Category Selection */}
-                <View className="mb-4">
-                  <Text className="text-base text-gray-100 mb-2 font-medium">Category</Text>
-                  <SelectList
-                    setSelected={(value) => setForm({ ...form, category: value })}
-                    data={categories}
-                    save="key"
-                    placeholder="Select a category"
-                    boxStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0 }}
-                    dropdownStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0, marginTop: 4 }}
-                    dropdownTextStyles={{ color: '#333' }}
-                    inputStyles={{ color: '#333' }}
-                    searchPlaceholder="Search categories..."
-                  />
-                </View>
+                {/* Category Dropdown */}
+                <Dropdown
+                  label="Category"
+                  placeholder="Select a category"
+                  value={form.category ? categories.find(c => c.key === form.category)?.value : null}
+                  items={categories}
+                  onSelect={(value) => setForm({ ...form, category: value })}
+                  icon="list-outline"
+                />
                 
-                {/* Budget Selection */}
-                <View className="mb-4">
-                  <Text className="text-base text-gray-100 mb-2 font-medium">Budget (Optional)</Text>
-                  <SelectList
-                    setSelected={(value) => setForm({ ...form, budget: value })}
-                    data={budgets}
-                    save="key"
-                    placeholder="Select a budget"
-                    boxStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0 }}
-                    dropdownStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0, marginTop: 4 }}
-                    dropdownTextStyles={{ color: '#333' }}
-                    inputStyles={{ color: '#333' }}
-                    searchPlaceholder="Search budgets..."
-                  />
-                  
-                  {budgets.some(budget => budget.isFamily) && (
-                    <Text className="text-xs text-gray-300 mt-1 ml-1">
-                      👨‍👩‍👦 Family budgets are shared with all family members
-                    </Text>
-                  )}
-                </View>
+                {/* Budget Dropdown */}
+                <Dropdown
+                  label="Budget (Optional)"
+                  placeholder="Select a budget"
+                  value={form.budget ? budgets.find(b => b.key === form.budget)?.value : null}
+                  items={budgets}
+                  onSelect={(value) => setForm({ ...form, budget: value })}
+                  icon="wallet-outline"
+                />
                 
-                {/* Spending Goal Selection */}
-                <View className="mb-4">
-                  <Text className="text-base text-gray-100 mb-2 font-medium">Spending Goal (Optional)</Text>
-                  <SelectList
-                    setSelected={(value) => setForm({ ...form, goal: value })}
-                    data={spendingGoals}
-                    save="key"
-                    placeholder="Select a goal"
-                    boxStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0 }}
-                    dropdownStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0, marginTop: 4 }}
-                    dropdownTextStyles={{ color: '#333' }}
-                    inputStyles={{ color: '#333' }}
-                    searchPlaceholder="Search spending goals..."
-                  />
-                  
-                  {spendingGoals.some(goal => goal.isFamily) && (
-                    <Text className="text-xs text-gray-300 mt-1 ml-1">
-                      👨‍👩‍👦 Family goals are shared with all family members
-                    </Text>
-                  )}
-                </View>
+                {/* Goal for Expenses */}
+                <Dropdown
+                  label="Spending Goal (Optional)"
+                  placeholder="Select a goal"
+                  value={form.goal ? spendingGoals.find(g => g.key === form.goal)?.value : null}
+                  items={spendingGoals}
+                  onSelect={(value) => setForm({ ...form, goal: value })}
+                  icon="flag-outline"
+                />
               </>
             )}
             
-            {/* For Contributions: Saving Goal Selection */}
+            {/* For Contributions: Saving Goal */}
             {isContribution && (
-              <View className="mb-4">
-                <Text className="text-base text-gray-100 mb-2 font-medium">Select Savings Goal</Text>
-                <SelectList
-                  setSelected={(value) => setForm({ ...form, goal: value })}
-                  data={savingGoals}
-                  save="key"
+              <View>
+                <Dropdown
+                  label="Savings Goal"
                   placeholder="Select a savings goal"
-                  boxStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0 }}
-                  dropdownStyles={{ backgroundColor: 'white', borderRadius: 10, borderWidth: 0, marginTop: 4 }}
-                  dropdownTextStyles={{ color: '#333' }}
-                  inputStyles={{ color: '#333' }}
-                  searchPlaceholder="Search savings goals..."
+                  value={form.goal ? savingGoals.find(g => g.key === form.goal)?.value : null}
+                  items={savingGoals}
+                  onSelect={(value) => {
+                    setForm({ ...form, goal: value });
+                    if (errors.goal) {
+                      setErrors({ ...errors, goal: null });
+                    }
+                  }}
+                  icon="flag-outline"
                 />
-                
-                {savingGoals.some(goal => goal.isFamily) && (
-                  <Text className="text-xs text-gray-300 mt-1 ml-1">
-                    👨‍👩‍👦 Family goals are shared with all family members
-                  </Text>
+                {errors.goal && (
+                  <Text style={styles.errorText}>{errors.goal}</Text>
                 )}
                 
                 {savingGoals.length === 0 && (
-                  <View className="mt-2 p-3 bg-yellow-800 rounded-lg">
-                    <Text className="text-yellow-200 font-medium">
+                  <View style={styles.noGoalsMessage}>
+                    <Ionicons name="alert-circle-outline" size={20} color={COLORS.secondary.main} />
+                    <Text style={styles.noGoalsText}>
                       You don't have any savings goals yet. Create a savings goal first.
                     </Text>
                   </View>
                 )}
-                
-                <View className="mt-4 p-4 bg-indigo-900 bg-opacity-50 rounded-lg">
-                  <View className="flex-row items-center mb-2">
-                    <Ionicons name="information-circle" size={20} color="#60A5FA" />
-                    <Text className="text-white font-medium ml-2">About Contributions</Text>
-                  </View>
-                  <Text className="text-gray-300">
-                    Contributions are amounts you're setting aside toward your savings goals. 
-                    They help you track progress toward financial targets.
-                  </Text>
+              </View>
+            )}
+            
+            {/* Information card for contributions */}
+            {isContribution && (
+              <View style={styles.infoCard}>
+                <View style={styles.infoHeader}>
+                  <Ionicons name="information-circle" size={20} color={COLORS.primary.main} />
+                  <Text style={styles.infoTitle}>About Contributions</Text>
                 </View>
+                <Text style={styles.infoText}>
+                  Contributions are amounts you're setting aside toward your savings goals. 
+                  They help you track progress toward financial targets.
+                </Text>
               </View>
             )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Fixed Submit Button at bottom */}
-      <View className="px-4 pb-6 pt-2 bg-gray-500 shadow-lg">
-        <CustomButton
+      
+      {/* Action Buttons */}
+      <View style={styles.actionContainer}>
+        <Button
+          title="Cancel"
+          variant="outline"
+          onPress={handleCancel}
+          style={styles.cancelButton}
+        />
+        <Button
           title={isContribution ? "Save Contribution" : "Save Expense"}
-          handlePress={submit}
-          containerStyles={`${isContribution ? 'bg-indigo-500' : 'bg-indigo-200'}`}
-          textStyles={isContribution ? 'text-white' : 'text-black'}
+          variant="primary"
+          onPress={handleSubmit}
+          isLoading={submitting}
+          style={styles.saveButton}
         />
       </View>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: COLORS.neutral[600],
+  },
+  header: {
+    backgroundColor: COLORS.primary.main,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  typeSwitcherContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  typeSwitcher: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.neutral[200],
+    borderRadius: 20,
+    padding: 4,
+    width: '80%',
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  activeTypeOption: {
+    backgroundColor: COLORS.primary.main,
+  },
+  typeOptionText: {
+    marginLeft: 4,
+    fontWeight: '500',
+    color: COLORS.neutral[500],
+  },
+  activeTypeOptionText: {
+    color: COLORS.white,
+  },
+  formContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 16,
+    ...SHADOWS.medium,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.neutral[700],
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: COLORS.neutral[800],
+  },
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: COLORS.neutral[700],
+    marginRight: 4,
+  },
+  amountInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 18,
+    fontWeight: '500',
+    color: COLORS.neutral[800],
+  },
+  dropdown: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: COLORS.neutral[800],
+  },
+  dropdownMenu: {
+    marginTop: 4,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+    ...SHADOWS.medium,
+    maxHeight: 200,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.neutral[200],
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: COLORS.neutral[800],
+  },
+  errorText: {
+    color: COLORS.error.main,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 8,
+  },
+  noGoalsMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.secondary.light + '30',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  noGoalsText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: COLORS.secondary.dark,
+  },
+  infoCard: {
+    backgroundColor: COLORS.primary.light + '30',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoTitle: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary.main,
+  },
+  infoText: {
+    fontSize: 14,
+    color: COLORS.neutral[700],
+    lineHeight: 20,
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.neutral[200],
+  },
+  cancelButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+  saveButton: {
+    flex: 2,
+    marginLeft: 8,
+  },
+});
 
 export default ExpenseTracking;
