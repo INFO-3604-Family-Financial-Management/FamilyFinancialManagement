@@ -287,7 +287,7 @@ class Goal(models.Model):
 class Streak(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='streaks')
     count = models.IntegerField(default=0)
-    last_updated = models.DateField(auto_now=True)
+    last_updated = models.DateField()
     
     class Meta:
         indexes = [
