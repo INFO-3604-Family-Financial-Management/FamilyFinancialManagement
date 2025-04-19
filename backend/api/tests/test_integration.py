@@ -1,4 +1,3 @@
-# backend/api/tests/test_integration.py
 
 from django.test import TestCase
 from django.urls import reverse
