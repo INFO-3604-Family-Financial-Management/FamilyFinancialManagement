@@ -143,9 +143,7 @@ The Expo application can be built for production using:
 
 ```bash
 cd info3604ffm
-npx expo prebuild  # Generate native projects
-npx expo build:android  # For Android
-npx expo build:ios  # For iOS
+es build --platform android  # For Android
 ```
 
 ---
