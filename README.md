@@ -118,18 +118,6 @@ cd info3604ffm
 npm test
 ```
 
-## 🔄 API Endpoints
-
-The backend provides the following main endpoints:
-
-- Authentication: `/api/token/`, `/api/register/`, `/api/token/refresh/`
-- Goals: `/api/goals/`
-- Budgets: `/api/budgets/`
-- Expenses: `/api/expenses/`
-- Family: `/api/family/`
-- User Profile: `/api/profile/`
-
-
 ## 🌟 Features
 
 - User authentication and registration
