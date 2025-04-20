@@ -129,25 +129,6 @@ The backend provides the following main endpoints:
 - Family: `/api/family/`
 - User Profile: `/api/profile/`
 
-## 🔒 Environment Variables
-
-### Backend Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```
-SECRET_KEY=your-secure-secret-key
-DEBUG=True  # Set to False in production
-DATABASE_URL=postgresql://user:pass@host:port/dbname  # Optional, for PostgreSQL
-```
-
-### Frontend Environment Variables
-
-The frontend uses the `constants/config.js` file to store configuration:
-
-```javascript
-export const BACKEND_URL = 'https://your-backend-url.com';
-```
 
 ## 🌟 Features
 
