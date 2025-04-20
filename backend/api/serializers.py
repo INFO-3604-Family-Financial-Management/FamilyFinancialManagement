@@ -60,6 +60,10 @@ class BudgetSerializer(serializers.ModelSerializer):
     def get_usage_percentage(self, obj):
         return obj.get_usage_percentage()
 
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Budget.objects.create(user=user, **validated_data)
+
 class GoalSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
     progress_percentage = serializers.SerializerMethodField()
@@ -80,17 +84,29 @@ class GoalSerializer(serializers.ModelSerializer):
     def get_remaining_amount(self, obj):
         return obj.get_remaining_amount()
 
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Goal.objects.create(user=user, **validated_data)
+
 class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = ['id', 'user', 'amount', 'description', 'date', 'budget', 'goal', 'created_at']
         read_only_fields = ['user', 'date', 'created_at']
 
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Expense.objects.create(user=user, **validated_data)
+
 class ContributionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contribution
         fields = ['id', 'amount', 'date', 'user', 'goal', 'created_at']
         read_only_fields = ['user', 'date', 'created_at']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Contribution.objects.create(user=user, **validated_data)
 
 class StreakSerializer(serializers.ModelSerializer):
     class Meta:

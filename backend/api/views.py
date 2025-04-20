@@ -79,7 +79,7 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
                 except (UserProfile.DoesNotExist, Budget.DoesNotExist):
                     pass
 
-        expense = serializer.save(user=self.request.user, goal=goal, budget=budget)
+        expense = serializer.save(goal=goal, budget=budget)
 
 class ExpenseDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ExpenseSerializer
@@ -332,7 +332,7 @@ class BudgetListCreateView(generics.ListCreateAPIView):
         return Budget.objects.filter(user=self.request.user, is_family=False)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user, is_family=False)
+        serializer.save(is_family=False)
 
 class FamilyBudgetListCreateView(generics.ListCreateAPIView):
     serializer_class = BudgetSerializer
@@ -358,7 +358,7 @@ class FamilyBudgetListCreateView(generics.ListCreateAPIView):
                 raise serializers.ValidationError("You must be part of a family to create family budgets")
                 
             # Save with the user's family
-            serializer.save(user=self.request.user, is_family=True, family=profile.family)
+            serializer.save(is_family=True, family=profile.family)
         except UserProfile.DoesNotExist:
             raise serializers.ValidationError("User profile not found")
         
@@ -499,7 +499,9 @@ class GoalListCreateView(generics.ListCreateAPIView):
         return personal_goals
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        # Remove user from save() call because serializer.create already adds user
+        serializer.save()
 
 class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = GoalSerializer
@@ -602,8 +604,13 @@ class ContributionListCreateView(generics.ListCreateAPIView):
         return Contribution.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-        # self.update_budget_and_income(contribution)
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            # Remove user from save() call because serializer.create already adds user
+            serializer.save()
+        except DjangoValidationError as e:
+            raise DRFValidationError(e.message_dict)
 
     def update_budget_and_income(self, contribution):
         user = contribution.user
@@ -643,7 +650,7 @@ class StreakViewSet(viewsets.ModelViewSet):
         return Streak.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
